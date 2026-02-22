@@ -1,6 +1,7 @@
 import { Pool, QueryResult } from 'pg';
 
 let pool: Pool | null = null;
+let initPromise: Promise<void> | null = null;
 
 function getDb() {
   if (!pool) {
@@ -12,7 +13,21 @@ function getDb() {
       database: process.env.DB_NAME || 'cricket_db',
     });
 
-    initializeDatabase(pool);
+    // start initialization and remember the promise
+    initPromise = initializeDatabase(pool).catch((err) => {
+      console.error('database initialization failed', err);
+    });
+
+    // wrap the pool.query method so callers automatically wait for init
+    const originalQuery = pool.query.bind(pool);
+    pool.query = async (...args: any[]) => {
+      // wait for initialization to finish before running any query
+      if (initPromise) {
+        await initPromise;
+      }
+      // @ts-ignore
+      return originalQuery(...args);
+    };
   }
 
   return pool;

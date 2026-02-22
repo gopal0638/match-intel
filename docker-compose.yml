@@ -19,6 +19,20 @@ services:
     networks:
       - cricket_network
 
+  # pgAdmin GUI for PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cricket_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"            # host:container
+    depends_on:
+      - postgres
+    networks:
+      - cricket_network
+
   # Next.js Application
   app:
     build:
