@@ -44,6 +44,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
   const [team1Players, setTeam1Players] = useState<Player[]>([]);
   const [team2Players, setTeam2Players] = useState<Player[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
@@ -237,6 +238,22 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     });
     setError('');
   };
+
+  const filteredEvents = events.filter((event) => {
+    if (!searchTerm.trim()) return true;
+    const search = searchTerm.toLowerCase();
+    const bowler = event.bowlerName.toLowerCase();
+    const batsman = event.batsmanName.toLowerCase();
+    const nonStriker = (event.nonStrikerName || '').toLowerCase();
+
+    return (
+      bowler.includes(search) ||
+      batsman.includes(search) ||
+      nonStriker.includes(search) ||
+      `${bowler} ${batsman}`.includes(search) ||
+      `${bowler} ${nonStriker}`.includes(search)
+    );
+  });
 
   if (!match) {
     return <div className="text-center py-8">Loading match details...</div>;
@@ -446,13 +463,25 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           <span className="text-3xl">📊</span>
           <h3 className="text-2xl font-bold text-gray-800">Match Events</h3>
           <span className="ml-auto bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-semibold text-sm">
-            {events.length}
+            {filteredEvents.length} {searchTerm && `/ ${events.length}`}
           </span>
         </div>
 
-        {events.length > 0 ? (
+        {events.length > 0 && (
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="🔍 Search by player, bowler, batsman, non-striker or combo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
+
+        {filteredEvents.length > 0 ? (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <div
                 key={event.id}
                 className={`border p-3 rounded-lg transition-all text-sm ${
@@ -543,7 +572,16 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           </div>
         ) : (
           <div className="text-center py-8 bg-indigo-50 rounded-lg border border-indigo-200">
-            <p className="text-indigo-700 text-sm font-semibold">📊 No events recorded yet</p>
+            {events.length === 0 ? (
+              <>
+                <p className="text-indigo-700 text-sm font-semibold">📊 No events recorded yet</p>
+              </>
+            ) : (
+              <>
+                <p className="text-indigo-700 text-sm font-semibold">🔍 No events match your search</p>
+                <p className="text-indigo-600 text-xs mt-2">Try searching with different keywords</p>
+              </>
+            )}
           </div>
         )}
       </div>
