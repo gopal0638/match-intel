@@ -8,19 +8,18 @@ export async function GET(
   try {
     const { id } = await params;
     const db = getDb();
-    const matches = db
-      .prepare(
-        `SELECT m.*, t1.name as team1Name, t2.name as team2Name, c.name as championshipName
-         FROM matches m
-         JOIN teams t1 ON m.team1Id = t1.id
-         JOIN teams t2 ON m.team2Id = t2.id
-         JOIN championships c ON m.championshipId = c.id
-         WHERE m.championshipId = ?
-         ORDER BY m.matchDate DESC`
-      )
-      .all(id);
+    const result = await db.query(
+      `SELECT m.*, t1.name as "team1Name", t2.name as "team2Name", c.name as "championshipName"
+       FROM matches m
+       JOIN teams t1 ON m."team1Id" = t1.id
+       JOIN teams t2 ON m."team2Id" = t2.id
+       JOIN championships c ON m."championshipId" = c.id
+       WHERE m."championshipId" = $1
+       ORDER BY m."matchDate" DESC`,
+      [id]
+    );
 
-    return NextResponse.json(matches);
+    return NextResponse.json(result.rows);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch matches' }, { status: 500 });
   }
@@ -42,16 +41,12 @@ export async function POST(
     }
 
     const db = getDb();
-    const result = db
-      .prepare(
-        'INSERT INTO matches (championshipId, team1Id, team2Id, matchDate) VALUES (?, ?, ?, ?)'
-      )
-      .run(id, team1Id, team2Id, matchDate);
-
-    return NextResponse.json(
-      { id: result.lastInsertRowid },
-      { status: 201 }
+    const result = await db.query(
+      'INSERT INTO matches ("championshipId", "team1Id", "team2Id", "matchDate") VALUES ($1, $2, $3, $4) RETURNING id',
+      [id, team1Id, team2Id, matchDate]
     );
+
+    return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create match' }, { status: 500 });
   }

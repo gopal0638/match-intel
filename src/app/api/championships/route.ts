@@ -4,10 +4,8 @@ import getDb from '@/lib/db';
 export async function GET(request: NextRequest) {
   try {
     const db = getDb();
-    const championships = db
-      .prepare('SELECT * FROM championships ORDER BY name')
-      .all();
-    return NextResponse.json(championships);
+    const result = await db.query('SELECT * FROM championships ORDER BY name');
+    return NextResponse.json(result.rows);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch championships' }, { status: 500 });
   }
@@ -22,16 +20,14 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getDb();
-    const result = db
-      .prepare('INSERT INTO championships (name) VALUES (?)')
-      .run(name);
-
-    return NextResponse.json(
-      { id: result.lastInsertRowid, name },
-      { status: 201 }
+    const result = await db.query(
+      'INSERT INTO championships (name) VALUES ($1) RETURNING id, name',
+      [name]
     );
+
+    return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error: any) {
-    if (error.message.includes('UNIQUE')) {
+    if (error.code === '23505') {
       return NextResponse.json(
         { error: 'Championship already exists' },
         { status: 409 }

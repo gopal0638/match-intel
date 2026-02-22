@@ -1,0 +1,18 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/championships/[id]/matches/route": "/api/championships/[id]/matches",
+  "/api/championships/route": "/api/championships",
+  "/api/matches/[id]/events/[eventId]/route": "/api/matches/[id]/events/[eventId]",
+  "/api/matches/[id]/events/route": "/api/matches/[id]/events",
+  "/api/matches/[id]/records/[recordId]/route": "/api/matches/[id]/records/[recordId]",
+  "/api/matches/[id]/records/route": "/api/matches/[id]/records",
+  "/api/matches/[id]/route": "/api/matches/[id]",
+  "/api/search/route": "/api/search",
+  "/api/teams/[id]/players/[playerId]/route": "/api/teams/[id]/players/[playerId]",
+  "/api/teams/[id]/players/route": "/api/teams/[id]/players",
+  "/api/teams/route": "/api/teams",
+  "/championships/[id]/page": "/championships/[id]",
+  "/matches/[id]/page": "/matches/[id]",
+  "/page": "/"
+}

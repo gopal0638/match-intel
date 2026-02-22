@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, QueryResult } from 'pg';
 
 let pool: Pool | null = null;
 
@@ -107,6 +107,6 @@ async function initializeDatabase(database: Pool) {
     CREATE INDEX IF NOT EXISTS idx_match_events_ballNumber ON match_events("ballNumber");
   `);
 }
-}
 
 export default getDb;
+export type { Pool, QueryResult };

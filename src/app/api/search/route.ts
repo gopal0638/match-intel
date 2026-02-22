@@ -20,88 +20,88 @@ export async function GET(request: NextRequest) {
     let bowlers: any[] = [];
 
     if (scope === 'match' && matchId) {
-      // Search within a specific match - search in match_events table
-      batsmen = db
-        .prepare(
-          `SELECT DISTINCT
-            ROW_NUMBER() OVER (ORDER BY me.id) as id,
-            me.matchId,
-            me.batsmanName as name,
-            'batsman' as role
-          FROM match_events me
-          WHERE me.matchId = ? AND me.batsmanName LIKE ?
-          ORDER BY me.id`
-        )
-        .all(matchId, searchPattern);
+      // Search within a specific match
+      const batsmenResult = await db.query(
+        `SELECT DISTINCT
+          me.id,
+          me."matchId",
+          me."batsmanName" as name,
+          'batsman' as role
+        FROM match_events me
+        WHERE me."matchId" = $1 AND me."batsmanName" ILIKE $2
+        ORDER BY me.id`,
+        [matchId, searchPattern]
+      );
+      batsmen = batsmenResult.rows;
 
-      bowlers = db
-        .prepare(
-          `SELECT DISTINCT
-            ROW_NUMBER() OVER (ORDER BY me.id) as id,
-            me.matchId,
-            me.bowlerName as name,
-            'bowler' as role
-          FROM match_events me
-          WHERE me.matchId = ? AND me.bowlerName LIKE ?
-          ORDER BY me.id`
-        )
-        .all(matchId, searchPattern);
+      const bowlersResult = await db.query(
+        `SELECT DISTINCT
+          me.id,
+          me."matchId",
+          me."bowlerName" as name,
+          'bowler' as role
+        FROM match_events me
+        WHERE me."matchId" = $1 AND me."bowlerName" ILIKE $2
+        ORDER BY me.id`,
+        [matchId, searchPattern]
+      );
+      bowlers = bowlersResult.rows;
     } else if (scope === 'championship' && championshipId) {
       // Search within a championship
-      batsmen = db
-        .prepare(
-          `SELECT DISTINCT
-            ROW_NUMBER() OVER (ORDER BY me.id) as id,
-            me.matchId,
-            me.batsmanName as name,
-            'batsman' as role
-          FROM match_events me
-          JOIN matches m ON me.matchId = m.id
-          WHERE m.championshipId = ? AND me.batsmanName LIKE ?
-          ORDER BY me.id`
-        )
-        .all(championshipId, searchPattern);
+      const batsmenResult = await db.query(
+        `SELECT DISTINCT
+          me.id,
+          me."matchId",
+          me."batsmanName" as name,
+          'batsman' as role
+        FROM match_events me
+        JOIN matches m ON me."matchId" = m.id
+        WHERE m."championshipId" = $1 AND me."batsmanName" ILIKE $2
+        ORDER BY me.id`,
+        [championshipId, searchPattern]
+      );
+      batsmen = batsmenResult.rows;
 
-      bowlers = db
-        .prepare(
-          `SELECT DISTINCT
-            ROW_NUMBER() OVER (ORDER BY me.id) as id,
-            me.matchId,
-            me.bowlerName as name,
-            'bowler' as role
-          FROM match_events me
-          JOIN matches m ON me.matchId = m.id
-          WHERE m.championshipId = ? AND me.bowlerName LIKE ?
-          ORDER BY me.id`
-        )
-        .all(championshipId, searchPattern);
+      const bowlersResult = await db.query(
+        `SELECT DISTINCT
+          me.id,
+          me."matchId",
+          me."bowlerName" as name,
+          'bowler' as role
+        FROM match_events me
+        JOIN matches m ON me."matchId" = m.id
+        WHERE m."championshipId" = $1 AND me."bowlerName" ILIKE $2
+        ORDER BY me.id`,
+        [championshipId, searchPattern]
+      );
+      bowlers = bowlersResult.rows;
     } else {
       // Global search
-      batsmen = db
-        .prepare(
-          `SELECT DISTINCT
-            ROW_NUMBER() OVER (ORDER BY me.id) as id,
-            me.matchId,
-            me.batsmanName as name,
-            'batsman' as role
-          FROM match_events me
-          WHERE me.batsmanName LIKE ?
-          ORDER BY me.id`
-        )
-        .all(searchPattern);
+      const batsmenResult = await db.query(
+        `SELECT DISTINCT
+          me.id,
+          me."matchId",
+          me."batsmanName" as name,
+          'batsman' as role
+        FROM match_events me
+        WHERE me."batsmanName" ILIKE $1
+        ORDER BY me.id`,
+        [searchPattern]
+      );
+      batsmen = batsmenResult.rows;
 
-      bowlers = db
-        .prepare(
-          `SELECT DISTINCT
-            ROW_NUMBER() OVER (ORDER BY me.id) as id,
-            me.matchId,
-            me.bowlerName as name,
-            'bowler' as role
-          FROM match_events me
-          WHERE me.bowlerName LIKE ?
-          ORDER BY me.id`
-        )
-        .all(searchPattern);
+      const bowlersResult = await db.query(
+        `SELECT DISTINCT
+          me.id,
+          me."matchId",
+          me."bowlerName" as name,
+          'bowler' as role
+        FROM match_events me
+        WHERE me."bowlerName" ILIKE $1
+        ORDER BY me.id`,
+        [searchPattern]
+      );
+      bowlers = bowlersResult.rows;
     }
 
     return NextResponse.json({

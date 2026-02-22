@@ -9,15 +9,17 @@ export async function GET(
     const { id } = await params;
     const db = getDb();
 
-    const batsmen = db
-      .prepare('SELECT * FROM batsman_records WHERE matchId = ? ORDER BY name')
-      .all(id);
+    const batsmenResult = await db.query(
+      'SELECT * FROM batsman_records WHERE "matchId" = $1 ORDER BY name',
+      [id]
+    );
 
-    const bowlers = db
-      .prepare('SELECT * FROM bowler_records WHERE matchId = ? ORDER BY name')
-      .all(id);
+    const bowlersResult = await db.query(
+      'SELECT * FROM bowler_records WHERE "matchId" = $1 ORDER BY name',
+      [id]
+    );
 
-    return NextResponse.json({ batsmen, bowlers });
+    return NextResponse.json({ batsmen: batsmenResult.rows, bowlers: bowlersResult.rows });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch match records' }, { status: 500 });
   }
@@ -49,14 +51,13 @@ export async function POST(
         );
       }
 
-      const result = db
-        .prepare(
-          'INSERT INTO batsman_records (matchId, name, runsScored, ballsFaced) VALUES (?, ?, ?, ?)'
-        )
-        .run(id, name, runsScored, ballsFaced);
+      const result = await db.query(
+        'INSERT INTO batsman_records ("matchId", name, "runsScored", "ballsFaced") VALUES ($1, $2, $3, $4) RETURNING id',
+        [id, name, runsScored, ballsFaced]
+      );
 
       return NextResponse.json(
-        { id: result.lastInsertRowid, type: 'batsman' },
+        { id: result.rows[0].id, type: 'batsman' },
         { status: 201 }
       );
     } else if (type === 'bowler') {
@@ -67,14 +68,13 @@ export async function POST(
         );
       }
 
-      const result = db
-        .prepare(
-          'INSERT INTO bowler_records (matchId, name, wicketsTaken, runsConceded) VALUES (?, ?, ?, ?)'
-        )
-        .run(id, name, wicketsTaken, runsConceded);
+      const result = await db.query(
+        'INSERT INTO bowler_records ("matchId", name, "wicketsTaken", "runsConceded") VALUES ($1, $2, $3, $4) RETURNING id',
+        [id, name, wicketsTaken, runsConceded]
+      );
 
       return NextResponse.json(
-        { id: result.lastInsertRowid, type: 'bowler' },
+        { id: result.rows[0].id, type: 'bowler' },
         { status: 201 }
       );
     }

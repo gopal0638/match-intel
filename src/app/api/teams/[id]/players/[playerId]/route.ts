@@ -9,9 +9,12 @@ export async function DELETE(
     const { id, playerId } = await params;
     const db = getDb();
 
-    const result = db.prepare('DELETE FROM players WHERE id = ? AND teamId = ?').run(playerId, id);
+    const result = await db.query(
+      'DELETE FROM players WHERE id = $1 AND "teamId" = $2 RETURNING id',
+      [playerId, id]
+    );
 
-    if (result.changes === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
 

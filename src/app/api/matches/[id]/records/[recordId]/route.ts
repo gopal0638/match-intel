@@ -11,22 +11,20 @@ export async function PUT(
     const db = getDb();
 
     // Try updating batsman record first
-    let result = db
-      .prepare(
-        'UPDATE batsman_records SET reviewed = ?, reviewComment = ? WHERE id = ?'
-      )
-      .run(reviewed ? 1 : 0, reviewComment || null, recordId);
+    let result = await db.query(
+      'UPDATE batsman_records SET reviewed = $1, "reviewComment" = $2 WHERE id = $3 RETURNING id',
+      [reviewed ? 1 : 0, reviewComment || null, recordId]
+    );
 
-    if (result.changes === 0) {
+    if (result.rows.length === 0) {
       // Try updating bowler record
-      result = db
-        .prepare(
-          'UPDATE bowler_records SET reviewed = ?, reviewComment = ? WHERE id = ?'
-        )
-        .run(reviewed ? 1 : 0, reviewComment || null, recordId);
+      result = await db.query(
+        'UPDATE bowler_records SET reviewed = $1, "reviewComment" = $2 WHERE id = $3 RETURNING id',
+        [reviewed ? 1 : 0, reviewComment || null, recordId]
+      );
     }
 
-    if (result.changes === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
 
@@ -45,14 +43,14 @@ export async function DELETE(
     const db = getDb();
 
     // Try deleting from batsman record first
-    let result = db.prepare('DELETE FROM batsman_records WHERE id = ?').run(recordId);
+    let result = await db.query('DELETE FROM batsman_records WHERE id = $1 RETURNING id', [recordId]);
 
-    if (result.changes === 0) {
+    if (result.rows.length === 0) {
       // Try deleting from bowler record
-      result = db.prepare('DELETE FROM bowler_records WHERE id = ?').run(recordId);
+      result = await db.query('DELETE FROM bowler_records WHERE id = $1 RETURNING id', [recordId]);
     }
 
-    if (result.changes === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
 

@@ -8,10 +8,11 @@ export async function GET(
   try {
     const { id } = await params;
     const db = getDb();
-    const players = db
-      .prepare('SELECT * FROM players WHERE teamId = ? ORDER BY name')
-      .all(id);
-    return NextResponse.json(players);
+    const result = await db.query(
+      'SELECT * FROM players WHERE "teamId" = $1 ORDER BY name',
+      [id]
+    );
+    return NextResponse.json(result.rows);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch players' }, { status: 500 });
   }
@@ -30,16 +31,14 @@ export async function POST(
     }
 
     const db = getDb();
-    const result = db
-      .prepare('INSERT INTO players (teamId, name, playerType) VALUES (?, ?, ?)')
-      .run(id, name, playerType || 'all rounder');
-
-    return NextResponse.json(
-      { id: result.lastInsertRowid, teamId: id, name, playerType: playerType || 'all rounder' },
-      { status: 201 }
+    const result = await db.query(
+      'INSERT INTO players ("teamId", name, "playerType") VALUES ($1, $2, $3) RETURNING id, "teamId", name, "playerType"',
+      [id, name, playerType || 'all rounder']
     );
+
+    return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error: any) {
-    if (error.message.includes('UNIQUE')) {
+    if (error.code === '23505') {
       return NextResponse.json(
         { error: 'Player already exists in this team' },
         { status: 409 }

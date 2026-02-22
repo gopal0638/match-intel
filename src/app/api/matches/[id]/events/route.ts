@@ -9,16 +9,15 @@ export async function GET(request: NextRequest, { params }: MatchEventsParams) {
   try {
     const { id } = await params;
     const db = getDb();
-    const events = db
-      .prepare(
-        `SELECT * FROM match_events
-         WHERE matchId = ?
-         ORDER BY
-           CAST(SUBSTR(ballNumber, 1, INSTR(ballNumber, '.') - 1) AS INTEGER),
-           CAST(SUBSTR(ballNumber, INSTR(ballNumber, '.') + 1) AS INTEGER)`
-      )
-      .all(id);
-    return NextResponse.json(events);
+    const result = await db.query(
+      `SELECT * FROM match_events
+       WHERE "matchId" = $1
+       ORDER BY
+         CAST(SPLIT_PART("ballNumber", '.', 1) AS INTEGER),
+         CAST(SPLIT_PART("ballNumber", '.', 2) AS INTEGER)`,
+      [id]
+    );
+    return NextResponse.json(result.rows);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch match events' }, { status: 500 });
   }
@@ -50,14 +49,12 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
     }
 
     const db = getDb();
-    const result = db
-      .prepare(
-        `INSERT INTO match_events (
-          matchId, ballNumber, bowlerName, batsmanName, bookmaker, favTeam, fancy, ballInfo,
-          finalScore, eventOccurred, eventDescription, hasComment, eventComment
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
+    const result = await db.query(
+      `INSERT INTO match_events (
+        "matchId", "ballNumber", "bowlerName", "batsmanName", bookmaker, "favTeam", fancy, "ballInfo",
+        "finalScore", "eventOccurred", "eventDescription", "hasComment", "eventComment"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [
         id,
         ballNumber,
         bowlerName,
@@ -70,28 +67,11 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
         eventOccurred ? 1 : 0,
         eventDescription || null,
         hasComment ? 1 : 0,
-        eventComment || null
-      );
-
-    return NextResponse.json(
-      {
-        id: result.lastInsertRowid,
-        matchId: id,
-        ballNumber,
-        bowlerName,
-        batsmanName,
-        bookmaker,
-        favTeam,
-        fancy,
-        ballInfo,
-        finalScore,
-        eventOccurred,
-        eventDescription,
-        hasComment,
-        eventComment,
-      },
-      { status: 201 }
+        eventComment || null,
+      ]
     );
+
+    return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error: any) {
     console.error('Error adding match event:', error);
     return NextResponse.json({ error: 'Failed to add match event' }, { status: 500 });

@@ -11,13 +11,16 @@ export async function DELETE(request: NextRequest, { params }: EventParams) {
     const db = getDb();
 
     // Verify event belongs to match
-    const event = db.prepare('SELECT * FROM match_events WHERE id = ? AND matchId = ?').get(eventId, id);
+    const eventResult = await db.query(
+      'SELECT * FROM match_events WHERE id = $1 AND "matchId" = $2',
+      [eventId, id]
+    );
 
-    if (!event) {
+    if (eventResult.rows.length === 0) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    db.prepare('DELETE FROM match_events WHERE id = ?').run(eventId);
+    await db.query('DELETE FROM match_events WHERE id = $1', [eventId]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -46,49 +49,38 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
     const db = getDb();
 
     // Verify event belongs to match
-    const event = db.prepare('SELECT * FROM match_events WHERE id = ? AND matchId = ?').get(eventId, id);
+    const eventResult = await db.query(
+      'SELECT * FROM match_events WHERE id = $1 AND "matchId" = $2',
+      [eventId, id]
+    );
 
-    if (!event) {
+    if (eventResult.rows.length === 0) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    db.prepare(
+    const result = await db.query(
       `UPDATE match_events
-       SET ballNumber = ?, bowlerName = ?, batsmanName = ?, bookmaker = ?, favTeam = ?, fancy = ?,
-           ballInfo = ?, finalScore = ?, eventOccurred = ?, eventDescription = ?, hasComment = ?, eventComment = ?
-       WHERE id = ?`
-    ).run(
-      ballNumber,
-      bowlerName,
-      batsmanName,
-      bookmaker || null,
-      favTeam || null,
-      fancy || null,
-      ballInfo || null,
-      finalScore || null,
-      eventOccurred ? 1 : 0,
-      eventDescription || null,
-      hasComment ? 1 : 0,
-      eventComment || null,
-      eventId
+       SET "ballNumber" = $1, "bowlerName" = $2, "batsmanName" = $3, bookmaker = $4, "favTeam" = $5, fancy = $6,
+           "ballInfo" = $7, "finalScore" = $8, "eventOccurred" = $9, "eventDescription" = $10, "hasComment" = $11, "eventComment" = $12
+       WHERE id = $13 RETURNING *`,
+      [
+        ballNumber,
+        bowlerName,
+        batsmanName,
+        bookmaker || null,
+        favTeam || null,
+        fancy || null,
+        ballInfo || null,
+        finalScore || null,
+        eventOccurred ? 1 : 0,
+        eventDescription || null,
+        hasComment ? 1 : 0,
+        eventComment || null,
+        eventId,
+      ]
     );
 
-    return NextResponse.json({
-      id: eventId,
-      matchId: id,
-      ballNumber,
-      bowlerName,
-      batsmanName,
-      bookmaker,
-      favTeam,
-      fancy,
-      ballInfo,
-      finalScore,
-      eventOccurred,
-      eventDescription,
-      hasComment,
-      eventComment,
-    });
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
   }

@@ -4,8 +4,8 @@ import getDb from '@/lib/db';
 export async function GET() {
   try {
     const db = getDb();
-    const teams = db.prepare('SELECT * FROM teams ORDER BY name').all();
-    return NextResponse.json(teams);
+    const result = await db.query('SELECT * FROM teams ORDER BY name');
+    return NextResponse.json(result.rows);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch teams' }, { status: 500 });
   }
@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getDb();
-    const result = db.prepare('INSERT INTO teams (name) VALUES (?)').run(name);
-
-    return NextResponse.json(
-      { id: result.lastInsertRowid, name },
-      { status: 201 }
+    const result = await db.query(
+      'INSERT INTO teams (name) VALUES ($1) RETURNING id, name',
+      [name]
     );
+
+    return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error: any) {
-    if (error.message.includes('UNIQUE')) {
+    if (error.code === '23505') {
       return NextResponse.json({ error: 'Team already exists' }, { status: 409 });
     }
     return NextResponse.json({ error: 'Failed to create team' }, { status: 500 });
