@@ -7,7 +7,7 @@ A web-based cricket data management platform built with **Next.js** and **React*
 - **Team Management**: Create and manage cricket teams with players
 - **Team Players**: Add and manage players for each team
 - **Championships**: Organize tournaments/championships
-- **Match Management**: Create matches between teams with date/time
+- **Match Management**: Create matches between teams with date/time, ground name, and type (Test/One Day/T20)
 - **Player Statistics**: Track batsman (runs, balls faced) and bowler (wickets, runs conceded) records
 - **Review System**: Add comments and mark records as reviewed
 - **Search Functionality**: Search players by name across:
@@ -99,6 +99,21 @@ src/
 - `PUT /api/matches/[id]/records/[recordId]` - Update record (review status, comments)
 - `DELETE /api/matches/[id]/records/[recordId]` - Delete a record
 
+---
+
+## Password-Protected Access 🔒
+This site now requires a password to view any page. Set an environment variable in your development or production environment:
+
+```bash
+AUTH_PASSWORD=your_secret_password
+```
+
+- A login page (`/login`) will be shown to unauthenticated users.
+- Successful login sets a cookie valid for one day; you can adjust the duration in `src/app/api/login/route.ts` or change the middleware logic in `middleware.ts`.
+- Use the **Logout** button in the top-right corner of any page to clear the session.
+
+
+
 ### Search
 - `GET /api/search?name={playerName}&scope={global|match|championship}` - Search player records
 
@@ -118,7 +133,7 @@ src/
 1. Create a championship
 2. Create teams
 3. Add players to teams (optional but recommended)
-4. Create matches within the championship
+4. Create matches within the championship (ground name and match type added to form)
 
 ### 2. Enter Match Data
 1. Navigate to a match

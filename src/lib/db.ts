@@ -64,12 +64,8 @@ async function initializeDatabase(database: Pool) {
       "team1Id" INTEGER NOT NULL,
       "team2Id" INTEGER NOT NULL,
       "matchDate" TIMESTAMP NOT NULL,
-      "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY ("championshipId") REFERENCES championships(id),
-      FOREIGN KEY ("team1Id") REFERENCES teams(id),
-      FOREIGN KEY ("team2Id") REFERENCES teams(id)
-    );
-
+      "groundName" TEXT,
+      "matchType" TEXT,
     CREATE TABLE IF NOT EXISTS batsman_records (
       id SERIAL PRIMARY KEY,
       "matchId" INTEGER NOT NULL,
@@ -98,6 +94,9 @@ async function initializeDatabase(database: Pool) {
     CREATE INDEX IF NOT EXISTS idx_batsman_matchId ON batsman_records("matchId");
     CREATE INDEX IF NOT EXISTS idx_bowler_matchId ON bowler_records("matchId");
     CREATE INDEX IF NOT EXISTS idx_matches_championshipId ON matches("championshipId");
+    -- ensure new columns exist if database already created
+    ALTER TABLE matches ADD COLUMN IF NOT EXISTS "groundName" TEXT;
+    ALTER TABLE matches ADD COLUMN IF NOT EXISTS "matchType" TEXT;
 
     CREATE TABLE IF NOT EXISTS match_events (
       id SERIAL PRIMARY KEY,

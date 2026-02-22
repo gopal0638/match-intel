@@ -9,6 +9,8 @@ interface Match {
   team1Id: number;
   team2Id: number;
   matchDate: string;
+  groundName: string;
+  matchType: string;
   team1Name: string;
   team2Name: string;
 }
@@ -32,6 +34,8 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
     team1Id: '',
     team2Id: '',
     matchDate: '',
+    groundName: '',
+    matchType: '',
   });
 
   useEffect(() => {
@@ -61,7 +65,13 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
 
   const handleAddMatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.team1Id || !formData.team2Id || !formData.matchDate) {
+    if (
+      !formData.team1Id ||
+      !formData.team2Id ||
+      !formData.matchDate ||
+      !formData.groundName ||
+      !formData.matchType
+    ) {
       setError('All fields are required');
       return;
     }
@@ -75,11 +85,13 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
           team1Id: parseInt(formData.team1Id),
           team2Id: parseInt(formData.team2Id),
           matchDate: formData.matchDate,
+          groundName: formData.groundName,
+          matchType: formData.matchType,
         }),
       });
 
       if (res.ok) {
-        setFormData({ team1Id: '', team2Id: '', matchDate: '' });
+        setFormData({ team1Id: '', team2Id: '', matchDate: '', groundName: '', matchType: '' });
         setShowForm(false);
         fetchMatches();
       } else {
@@ -162,6 +174,30 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Ground Name</label>
+              <input
+                type="text"
+                value={formData.groundName}
+                onChange={(e) => setFormData({ ...formData, groundName: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Match Type</label>
+              <select
+                value={formData.matchType}
+                onChange={(e) => setFormData({ ...formData, matchType: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select Type</option>
+                <option value="Test">Test</option>
+                <option value="One Day">One Day</option>
+                <option value="T20">T20</option>
+              </select>
+            </div>
           </div>
 
           <button
@@ -195,6 +231,9 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
                 </div>
                 <p className="text-gray-600 text-sm ml-7">
                   📅 {new Date(match.matchDate).toLocaleString()}
+                </p>
+                <p className="text-gray-600 text-sm ml-7">
+                  🏟️ {match.groundName} • {match.matchType}
                 </p>
               </div>
               <span className="text-blue-600 text-sm font-semibold bg-blue-100 px-3 py-1 rounded-full">

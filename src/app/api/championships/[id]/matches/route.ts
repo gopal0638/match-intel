@@ -31,19 +31,19 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const { team1Id, team2Id, matchDate } = await request.json();
+    const { team1Id, team2Id, matchDate, groundName, matchType } = await request.json();
 
-    if (!team1Id || !team2Id || !matchDate) {
+    if (!team1Id || !team2Id || !matchDate || !groundName || !matchType) {
       return NextResponse.json(
-        { error: 'team1Id, team2Id, and matchDate are required' },
+        { error: 'team1Id, team2Id, matchDate, groundName and matchType are required' },
         { status: 400 }
       );
     }
 
     const db = getDb();
     const result = await db.query(
-      'INSERT INTO matches ("championshipId", "team1Id", "team2Id", "matchDate") VALUES ($1, $2, $3, $4) RETURNING id',
-      [id, team1Id, team2Id, matchDate]
+      'INSERT INTO matches ("championshipId", "team1Id", "team2Id", "matchDate", "groundName", "matchType") VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [id, team1Id, team2Id, matchDate, groundName, matchType]
     );
 
     return NextResponse.json(result.rows[0], { status: 201 });

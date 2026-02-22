@@ -3,6 +3,8 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/api/championships/[id]/matches/route": "app/api/championships/[id]/matches/route.js",
   "/api/championships/route": "app/api/championships/route.js",
+  "/api/login/route": "app/api/login/route.js",
+  "/api/logout/route": "app/api/logout/route.js",
   "/api/matches/[id]/events/[eventId]/route": "app/api/matches/[id]/events/[eventId]/route.js",
   "/api/matches/[id]/events/route": "app/api/matches/[id]/events/route.js",
   "/api/matches/[id]/records/[recordId]/route": "app/api/matches/[id]/records/[recordId]/route.js",
@@ -13,6 +15,7 @@
   "/api/teams/[id]/players/route": "app/api/teams/[id]/players/route.js",
   "/api/teams/route": "app/api/teams/route.js",
   "/championships/[id]/page": "app/championships/[id]/page.js",
+  "/login/page": "app/login/page.js",
   "/matches/[id]/page": "app/matches/[id]/page.js",
   "/page": "app/page.js"
 }

@@ -31,7 +31,7 @@ RUN npm install --legacy-peer-deps --production
 
 # some Next.js configurations (e.g. next.config.ts) require TypeScript at runtime
 # even in production, so install it explicitly so that `next start` won't try to
-automatically fetch it.
+# automatically fetch it.
 RUN npm install --no-save typescript
 
 # Copy built app from builder

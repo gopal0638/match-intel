@@ -131,6 +131,18 @@
       "namedRegex": "^/api/championships(?:/)?$"
     },
     {
+      "page": "/api/login",
+      "regex": "^/api/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/login(?:/)?$"
+    },
+    {
+      "page": "/api/logout",
+      "regex": "^/api/logout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/logout(?:/)?$"
+    },
+    {
       "page": "/api/search",
       "regex": "^/api/search(?:/)?$",
       "routeKeys": {},
@@ -141,6 +153,12 @@
       "regex": "^/api/teams(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/teams(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
     }
   ],
   "dataRoutes": [],
