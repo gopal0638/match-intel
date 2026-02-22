@@ -22,9 +22,11 @@ interface MatchEvent {
   ballNumber: string;
   bowlerName: string;
   batsmanName: string;
+  nonStrikerName: string | null;
   bookmaker: string | null;
   favTeam: string | null;
-  fancy: string | null;
+  fancy1: string | null;
+  fancy2: string | null;
   ballInfo: string | null;
   finalScore: string | null;
   eventOccurred: number;
@@ -49,9 +51,11 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     ballNumber: '',
     bowlerName: '',
     batsmanName: '',
+    nonStrikerName: '',
     bookmaker: '',
     favTeam: '',
-    fancy: '',
+    fancy1: '',
+    fancy2: '',
     ballInfo: '',
     finalScore: '',
     eventOccurred: false,
@@ -64,7 +68,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     fetchMatchDetails();
     fetchEvents();
     // Initialize with first ball
-    setFormData(prev => ({ ...prev, ballNumber: '0.1' }));
+        setFormData(prev => ({ ...prev, ballNumber: '0.1' }));
   }, [matchId]);
 
   const fetchMatchDetails = async () => {
@@ -151,9 +155,11 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           ballNumber: nextBall,
           bowlerName: formData.bowlerName,
           batsmanName: formData.batsmanName,
+          nonStrikerName: '',
           bookmaker: '',
           favTeam: '',
-          fancy: '',
+          fancy1: '',
+          fancy2: '',
           ballInfo: '',
           finalScore: '',
           eventOccurred: false,
@@ -196,9 +202,11 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       ballNumber: event.ballNumber,
       bowlerName: event.bowlerName,
       batsmanName: event.batsmanName,
+      nonStrikerName: event.nonStrikerName || '',
       bookmaker: event.bookmaker || '',
       favTeam: event.favTeam || '',
-      fancy: event.fancy || '',
+      fancy1: event.fancy1 || '',
+      fancy2: event.fancy2 || '',
       ballInfo: event.ballInfo || '',
       finalScore: event.finalScore || '',
       eventOccurred: event.eventOccurred === 1,
@@ -215,9 +223,11 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       ballNumber: getNextBallNumber(events),
       bowlerName: formData.bowlerName,
       batsmanName: formData.batsmanName,
+      nonStrikerName: '',
       bookmaker: '',
       favTeam: '',
-      fancy: '',
+      fancy1: '',
+      fancy2: '',
       ballInfo: '',
       finalScore: '',
       eventOccurred: false,
@@ -300,6 +310,22 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
             </div>
 
             <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">👤 Non-Striker</label>
+              <select
+                value={formData.nonStrikerName}
+                onChange={(e) => setFormData({ ...formData, nonStrikerName: e.target.value })}
+                className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Select</option>
+                {allPlayers.map((player) => (
+                  <option key={`nonstriker-${player.id}`} value={player.name}>
+                    {player.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Bookmaker</label>
               <input
                 type="text"
@@ -324,15 +350,26 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
             </div>
           </div>
 
-          {/* Row 2: Fancy, Ball Info, Final Score, Event, Comment */}
+          {/* Row 2: Fancy 1, Fancy 2, Ball Info, Final Score, Event, Comment */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Fancy</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">💰 Fancy 1</label>
               <input
                 type="text"
-                value={formData.fancy}
-                onChange={(e) => setFormData({ ...formData, fancy: e.target.value })}
-                placeholder="Fancy"
+                value={formData.fancy1}
+                onChange={(e) => setFormData({ ...formData, fancy1: e.target.value })}
+                placeholder="Fancy 1"
+                className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">💰 Fancy 2</label>
+              <input
+                type="text"
+                value={formData.fancy2}
+                onChange={(e) => setFormData({ ...formData, fancy2: e.target.value })}
+                placeholder="Fancy 2"
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
@@ -436,6 +473,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                     <span className="text-xs font-semibold text-gray-600">
                       🏏 {event.batsmanName}
                     </span>
+                    {event.nonStrikerName && (
+                      <>
+                        <span className="text-xs text-gray-500">/</span>
+                        <span className="text-xs font-semibold text-gray-500">
+                          🧑 {event.nonStrikerName}
+                        </span>
+                      </>
+                    )}
                     {event.bookmaker && (
                       <span className="text-xs bg-gray-200 text-gray-800 px-1 py-0.5 rounded">
                         BM: {event.bookmaker}
@@ -446,9 +491,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                         FAV: {event.favTeam}
                       </span>
                     )}
-                    {event.fancy && (
+                    {event.fancy1 && (
                       <span className="text-xs bg-purple-200 text-purple-800 px-1 py-0.5 rounded">
-                        {event.fancy}
+                        💰 {event.fancy1}
+                      </span>
+                    )}
+                    {event.fancy2 && (
+                      <span className="text-xs bg-purple-200 text-purple-800 px-1 py-0.5 rounded">
+                        💰 {event.fancy2}
                       </span>
                     )}
                   </div>

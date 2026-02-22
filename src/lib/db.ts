@@ -104,9 +104,11 @@ async function initializeDatabase(database: Pool) {
       "ballNumber" TEXT NOT NULL,
       "bowlerName" TEXT NOT NULL,
       "batsmanName" TEXT NOT NULL,
+      "nonStrikerName" TEXT,
       bookmaker TEXT,
       "favTeam" TEXT,
-      fancy TEXT,
+      fancy1 TEXT,
+      fancy2 TEXT,
       "ballInfo" TEXT,
       "finalScore" TEXT,
       "eventOccurred" INTEGER DEFAULT 0,
@@ -119,6 +121,10 @@ async function initializeDatabase(database: Pool) {
 
     CREATE INDEX IF NOT EXISTS idx_match_events_matchId ON match_events("matchId");
     CREATE INDEX IF NOT EXISTS idx_match_events_ballNumber ON match_events("ballNumber");
+    -- ensure new columns exist if database already created
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "nonStrikerName" TEXT;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS fancy1 TEXT;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS fancy2 TEXT;
   `);
 }
 

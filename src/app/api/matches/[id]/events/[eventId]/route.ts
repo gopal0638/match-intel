@@ -35,9 +35,11 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
       ballNumber,
       bowlerName,
       batsmanName,
+      nonStrikerName,
       bookmaker,
       favTeam,
-      fancy,
+      fancy1,
+      fancy2,
       ballInfo,
       finalScore,
       eventOccurred,
@@ -60,16 +62,18 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
 
     const result = await db.query(
       `UPDATE match_events
-       SET "ballNumber" = $1, "bowlerName" = $2, "batsmanName" = $3, bookmaker = $4, "favTeam" = $5, fancy = $6,
-           "ballInfo" = $7, "finalScore" = $8, "eventOccurred" = $9, "eventDescription" = $10, "hasComment" = $11, "eventComment" = $12
-       WHERE id = $13 RETURNING *`,
+       SET "ballNumber" = $1, "bowlerName" = $2, "batsmanName" = $3, "nonStrikerName" = $4, bookmaker = $5, "favTeam" = $6, fancy1 = $7, fancy2 = $8,
+           "ballInfo" = $9, "finalScore" = $10, "eventOccurred" = $11, "eventDescription" = $12, "hasComment" = $13, "eventComment" = $14
+       WHERE id = $15 RETURNING *`,
       [
         ballNumber,
         bowlerName,
         batsmanName,
+        nonStrikerName || null,
         bookmaker || null,
         favTeam || null,
-        fancy || null,
+        fancy1 || null,
+        fancy2 || null,
         ballInfo || null,
         finalScore || null,
         eventOccurred ? 1 : 0,

@@ -30,9 +30,11 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
       ballNumber,
       bowlerName,
       batsmanName,
+      nonStrikerName,
       bookmaker,
       favTeam,
-      fancy,
+      fancy1,
+      fancy2,
       ballInfo,
       finalScore,
       eventOccurred,
@@ -51,17 +53,19 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
     const db = getDb();
     const result = await db.query(
       `INSERT INTO match_events (
-        "matchId", "ballNumber", "bowlerName", "batsmanName", bookmaker, "favTeam", fancy, "ballInfo",
+        "matchId", "ballNumber", "bowlerName", "batsmanName", "nonStrikerName", bookmaker, "favTeam", fancy1, fancy2, "ballInfo",
         "finalScore", "eventOccurred", "eventDescription", "hasComment", "eventComment"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
       [
         id,
         ballNumber,
         bowlerName,
         batsmanName,
+        nonStrikerName || null,
         bookmaker || null,
         favTeam || null,
-        fancy || null,
+        fancy1 || null,
+        fancy2 || null,
         ballInfo || null,
         finalScore || null,
         eventOccurred ? 1 : 0,
