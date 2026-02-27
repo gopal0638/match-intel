@@ -168,35 +168,31 @@ AUTH_PASSWORD=your_secret_password
 
 ## What to do now
 
-1. **Install dependencies** (for non-Docker development):
+1. **Install dependencies** (for local development):
    ```bash
    npm install
    ```
 
-2. **Run with Docker compose** (recommended for local testing):
+2. **Run the development server**
    ```bash
-   docker-compose up --build
+   npm run dev
    ```
-   - App will be available at `http://localhost:3000`.
-   - PostgreSQL listens on `localhost:5432` with user/password `postgres`.
-   - pgAdmin is available at `http://localhost:8080` (login: `admin@admin.com` / `admin`).
-   - All database tables are created automatically on first request.
+   The application will be available at `http://localhost:3000`.
 
-3. **Interact with the database**:
-   - Use pgAdmin or run `docker-compose exec postgres psql -U postgres -d cricket_db`.
-   - If you're running Postgres natively, set `DB_*` environment variables before starting the app.
+3. **Interact with the database**
+   - The project uses SQLite by default; the database file is at `data/cricket.db`.
+   - If you prefer Postgres, run a local Postgres instance and set the `DB_*` environment variables before starting the app.
 
 4. **Building for production**:
    ```bash
    npm run build
    npm start
    ```
-   or build a Docker image with `docker build -t match-intel-app .` and deploy the `app` service separately.
 
 5. **Next steps**:
-   - Add data via the UI or pgAdmin.
+   - Add data via the UI.
    - Explore the API endpoints described above.
-   - Consider migrating to a hosted Postgres instance for production or adding migrations/seeding logic.
+   - Consider adding migrations/seeding logic for production deployments.
 
 ## License
 

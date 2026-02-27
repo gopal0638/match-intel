@@ -1,1 +1,3 @@
-This directory holds static assets for the Next.js app. It was added to satisfy the Dockerfile copy step.
+```markdown
+This directory holds static assets for the Next.js app.
+```
