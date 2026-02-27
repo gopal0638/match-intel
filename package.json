@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:docker:up": "docker-compose up -d postgres",
+    "db:docker:down": "docker-compose down",
+    "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -23,6 +26,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "ts-node": "^10",
+    "tsx": "^4"
   }
 }

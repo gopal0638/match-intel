@@ -65,7 +65,9 @@ async function initializeDatabase(database: Pool) {
       "team2Id" INTEGER NOT NULL,
       "matchDate" TIMESTAMP NOT NULL,
       "groundName" TEXT,
-      "matchType" TEXT,
+      "matchType" TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS batsman_records (
       id SERIAL PRIMARY KEY,
       "matchId" INTEGER NOT NULL,

@@ -181,7 +181,33 @@ AUTH_PASSWORD=your_secret_password
 
 3. **Interact with the database**
    - The project uses SQLite by default; the database file is at `data/cricket.db`.
-   - If you prefer Postgres, run a local Postgres instance and set the `DB_*` environment variables before starting the app.
+   - If you prefer Postgres, you can run a local Postgres container using Docker Compose (provided in `docker-compose.yml`).
+
+   Run Postgres with Docker Compose:
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+   The Postgres container exposes port `5432` on your host. Default credentials are set in `.env.docker`:
+
+   - `DB_USER=postgres`
+   - `DB_PASSWORD=postgres`
+   - `DB_NAME=cricket_db`
+
+   To run the app against the Docker Postgres instance, set the environment variables in your shell (example for PowerShell):
+   ```powershell
+   $env:DB_HOST = 'localhost'
+   $env:DB_PORT = '5432'
+   $env:DB_USER = 'postgres'
+   $env:DB_PASSWORD = 'postgres'
+   $env:DB_NAME = 'cricket_db'
+   npm run dev
+   ```
+
+   The app will run and the database schema will be initialized automatically on the first query. Alternatively you can run the provided migration script (requires `ts-node`):
+   ```bash
+   npx ts-node scripts/migrate.ts
+   ```
 
 4. **Building for production**:
    ```bash
