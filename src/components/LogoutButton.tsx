@@ -11,7 +11,7 @@ export default function LogoutButton() {
   }
 
   return (
-    <button onClick={handleLogout} style={{ position: 'fixed', top: 10, right: 10 }}>
+    <button onClick={handleLogout} style={{  position: 'absolute', top: '10px', right: '10px', padding: '10px', background: 'white', cursor: 'pointer' }}>
       Logout
     </button>
   );

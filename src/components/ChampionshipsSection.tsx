@@ -138,7 +138,7 @@ export default function ChampionshipsSection() {
                 e.stopPropagation();
                 requestDeleteChampionship(championship);
               }}
-              className="deleteChampionship absolute top-3 right-3 text-red-600 hover:text-red-800 text-lg bg-white p-1 rounded-full shadow hover:bg-red-50 cursor-pointer"
+              className="deleteChampionship top-3 right-3 text-red-600 hover:text-red-800 text-lg bg-white p-1 rounded-full shadow hover:bg-red-50 cursor-pointer"
               title="Delete championship"
             >
               🗑️
