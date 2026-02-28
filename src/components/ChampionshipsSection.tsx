@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ConfirmDialog from './ConfirmDialog';
 
 interface Championship {
   id: number;
@@ -13,6 +14,33 @@ export default function ChampionshipsSection() {
   const [newChampionshipName, setNewChampionshipName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [champToDelete, setChampToDelete] = useState<Championship | null>(null);
+
+  const handleDeleteChampionship = async (championship: Championship) => {
+    try {
+      const res = await fetch(`/api/championships/${championship.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmName: championship.name }),
+      });
+
+      if (res.ok) {
+        setChampionships(championships.filter((c) => c.id !== championship.id));
+        setError('');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete championship');
+      }
+    } catch (err) {
+      setError('Failed to delete championship');
+    } finally {
+      setChampToDelete(null);
+    }
+  };
+
+  const requestDeleteChampionship = (championship: Championship) => {
+    setChampToDelete(championship);
+  };
 
   useEffect(() => {
     fetchChampionships();
@@ -103,7 +131,18 @@ export default function ChampionshipsSection() {
                 <p className="font-semibold text-lg text-gray-800 group-hover:text-amber-700">{championship.name}</p>
                 <p className="text-sm text-gray-500 mt-2">Click to view matches →</p>
               </div>
-              <span className="text-3xl">🎯</span>
+              {/* <span className="text-3xl">🎯</span> */}
+              <span
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                requestDeleteChampionship(championship);
+              }}
+              className="deleteChampionship absolute top-3 right-3 text-red-600 hover:text-red-800 text-lg bg-white p-1 rounded-full shadow hover:bg-red-50 cursor-pointer"
+              title="Delete championship"
+            >
+              🗑️
+            </span>
             </div>
           </Link>
         ))}
@@ -114,6 +153,24 @@ export default function ChampionshipsSection() {
           <div className="text-6xl mb-4">🏏</div>
           <p className="text-gray-500 text-lg">No championships created yet. Start by adding your first tournament!</p>
         </div>
+      )}
+
+      {champToDelete && (
+        <ConfirmDialog
+          title="Delete Championship"
+          message={`Type the championship name to confirm deletion: "${champToDelete.name}"`}
+          placeholder="Championship name"
+          defaultValue=""
+          onConfirm={(val) => {
+            if (val === champToDelete.name) {
+              handleDeleteChampionship(champToDelete);
+            } else {
+              alert('Name mismatch, deletion cancelled');
+              setChampToDelete(null);
+            }
+          }}
+          onCancel={() => setChampToDelete(null)}
+        />
       )}
     </div>
   );

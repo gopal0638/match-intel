@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import TeamPlayers from './TeamPlayers';
+import ConfirmDialog from './ConfirmDialog';
 
 interface Team {
   id: number;
@@ -14,6 +15,7 @@ export default function TeamsSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
 
   useEffect(() => {
     fetchTeams();
@@ -27,6 +29,33 @@ export default function TeamsSection() {
     } catch (err) {
       setError('Failed to load teams');
     }
+  };
+
+  const handleDeleteTeam = async (team: Team) => {
+    try {
+      const res = await fetch(`/api/teams/${team.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmName: team.name }),
+      });
+
+      if (res.ok) {
+        setTeams(teams.filter((t) => t.id !== team.id));
+        if (expandedTeamId === team.id) setExpandedTeamId(null);
+        setError('');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete team');
+      }
+    } catch (err) {
+      setError('Failed to delete team');
+    } finally {
+      setTeamToDelete(null);
+    }
+  };
+
+  const requestDeleteTeam = (team: Team) => {
+    setTeamToDelete(team);
   };
 
   const handleAddTeam = async (e: React.FormEvent) => {
@@ -95,10 +124,10 @@ export default function TeamsSection() {
 
       <div className="space-y-3">
         {teams.map((team) => (
-          <div key={team.id}>
+          <div key={team.id} className="relative">
             <button
               onClick={() => setExpandedTeamId(expandedTeamId === team.id ? null : team.id)}
-              className="w-full text-left border border-gray-200 p-4 rounded-lg hover:shadow-md transition-all bg-gradient-to-r hover:from-blue-50 hover:to-transparent font-semibold text-lg text-gray-800 flex items-center justify-between"
+              className="w-full text-left border border-gray-200 p-4 pr-12 rounded-lg hover:shadow-md transition-all bg-gradient-to-r hover:from-blue-50 hover:to-transparent font-semibold text-lg text-gray-800 flex items-center justify-between"
             >
               <span className="flex items-center gap-3">
                 <span className="text-2xl">🏟️</span>
@@ -106,6 +135,17 @@ export default function TeamsSection() {
               </span>
               <span className="text-2xl">{expandedTeamId === team.id ? '▼' : '▶'}</span>
             </button>
+            <a
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                requestDeleteTeam(team);
+              }}
+              className="deleteTeam absolute top-3 right-3 text-red-600 hover:text-red-800 text-lg bg-white p-1 rounded-full shadow hover:bg-red-50 cursor-pointer"
+              title="Delete team"
+            >
+              🗑️
+            </a>
             {expandedTeamId === team.id && <TeamPlayers teamId={team.id} teamName={team.name} />}
           </div>
         ))}
@@ -116,6 +156,24 @@ export default function TeamsSection() {
           <div className="text-6xl mb-4">🏏</div>
           <p className="text-gray-500 text-lg">No teams created yet. Start by adding your first team!</p>
         </div>
+      )}
+
+      {teamToDelete && (
+        <ConfirmDialog
+          title="Delete Team"
+          message={`Type the team name to confirm deletion: "${teamToDelete.name}"`}
+          placeholder="Team name"
+          defaultValue=""
+          onConfirm={(val) => {
+            if (val === teamToDelete.name) {
+              handleDeleteTeam(teamToDelete);
+            } else {
+              alert('Name mismatch, deletion cancelled');
+              setTeamToDelete(null);
+            }
+          }}
+          onCancel={() => setTeamToDelete(null)}
+        />
       )}
     </div>
   );

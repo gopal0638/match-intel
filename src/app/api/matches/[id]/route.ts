@@ -57,3 +57,41 @@ export async function GET(request: NextRequest, { params }: MatchDetailsParams) 
     return NextResponse.json({ error: 'Failed to fetch match details' }, { status: 500 });
   }
 }
+
+// DELETE handler for removing a match with name confirmation
+export async function DELETE(request: NextRequest, { params }: MatchDetailsParams) {
+  try {
+    const { id } = await params;
+    const { confirmName } = await request.json();
+
+    const db = getDb();
+    // retrieve match names
+    const matchRes = await db.query(
+      `SELECT m.*, t1.name as "team1Name", t2.name as "team2Name"
+       FROM matches m
+       JOIN teams t1 ON m."team1Id" = t1.id
+       JOIN teams t2 ON m."team2Id" = t2.id
+       WHERE m.id = $1`,
+      [id]
+    );
+
+    if (matchRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 });
+    }
+
+    const match = matchRes.rows[0] as MatchData;
+    const expected = `${match.team1Name} vs ${match.team2Name}`;
+
+    if (!confirmName || confirmName.trim() !== expected) {
+      return NextResponse.json(
+        { error: `Name confirmation does not match expected match name: ${expected}` },
+        { status: 400 }
+      );
+    }
+
+    await db.query('DELETE FROM matches WHERE id = $1', [id]);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete match' }, { status: 500 });
+  }
+}

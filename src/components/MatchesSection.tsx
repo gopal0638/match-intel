@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ConfirmDialog from './ConfirmDialog';
 
 interface Match {
   id: number;
@@ -37,6 +38,7 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
     groundName: '',
     matchType: '',
   });
+  const [matchToDelete, setMatchToDelete] = useState<Match | null>(null);
 
   useEffect(() => {
     fetchTeams();
@@ -103,6 +105,33 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteMatch = async (match: Match) => {
+    const matchName = `${match.team1Name} vs ${match.team2Name}`;
+    try {
+      const res = await fetch(`/api/matches/${match.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmName: matchName }),
+      });
+
+      if (res.ok) {
+        setMatches(matches.filter((m) => m.id !== match.id));
+        setError('');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete match');
+      }
+    } catch (err) {
+      setError('Failed to delete match');
+    } finally {
+      setMatchToDelete(null);
+    }
+  };
+
+  const requestDeleteMatch = (match: Match) => {
+    setMatchToDelete(match);
   };
 
   return (
@@ -212,35 +241,47 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
 
       <div className="space-y-3">
         {matches.map((match) => (
-          <Link
-            key={match.id}
-            href={`/matches/${match.id}`}
-            className="border border-blue-200 p-5 rounded-lg hover:shadow-lg transition-all transform hover:scale-102 block hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 cursor-pointer"
-          >
-            <div className="flex justify-between items-center">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xl">🏏</span>
-                  <p className="font-bold text-lg text-gray-800">
-                    {match.team1Name}
+          <div key={match.id} className="relative">
+            <Link
+              href={`/matches/${match.id}`}
+              className="border border-blue-200 p-5 pr-12 rounded-lg hover:shadow-lg transition-all transform hover:scale-102 block hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 cursor-pointer"
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">🏏</span>
+                    <p className="font-bold text-lg text-gray-800">
+                      {match.team1Name}
+                    </p>
+                    <span className="text-gray-400 font-semibold">vs</span>
+                    <p className="font-bold text-lg text-gray-800">
+                      {match.team2Name}
+                    </p>
+                  </div>
+                  <p className="text-gray-600 text-sm ml-7">
+                    📅 {new Date(match.matchDate).toLocaleString()}
                   </p>
-                  <span className="text-gray-400 font-semibold">vs</span>
-                  <p className="font-bold text-lg text-gray-800">
-                    {match.team2Name}
+                  <p className="text-gray-600 text-sm ml-7">
+                    🏟️ {match.groundName} • {match.matchType}
                   </p>
                 </div>
-                <p className="text-gray-600 text-sm ml-7">
-                  📅 {new Date(match.matchDate).toLocaleString()}
-                </p>
-                <p className="text-gray-600 text-sm ml-7">
-                  🏟️ {match.groundName} • {match.matchType}
-                </p>
+                <span className="text-blue-600 text-sm font-semibold bg-blue-100 px-3 py-1 rounded-full">
+                  Enter Data →
+                </span>
               </div>
-              <span className="text-blue-600 text-sm font-semibold bg-blue-100 px-3 py-1 rounded-full">
-                Enter Data →
-              </span>
-            </div>
-          </Link>
+            </Link>
+            <a
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                requestDeleteMatch(match);
+              }}
+              className="deleteMatch absolute top-3 right-3 text-red-600 hover:text-red-800 text-lg bg-white p-1 rounded-full shadow hover:bg-red-50 cursor-pointer"
+              title="Delete match"
+            >
+              🗑️
+            </a>
+          </div>
         ))}
       </div>
 
@@ -249,6 +290,25 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
           <p className="text-blue-700 text-lg font-semibold">🏟️ No matches created yet</p>
           <p className="text-blue-600 text-sm mt-1">Create your first match to get started</p>
         </div>
+      )}
+
+      {matchToDelete && (
+        <ConfirmDialog
+          title="Delete Match"
+          message={`Type the match name to confirm deletion: "${matchToDelete.team1Name} vs ${matchToDelete.team2Name}"`}
+          placeholder="Team1 vs Team2"
+          defaultValue=""
+          onConfirm={(val) => {
+            const expected = `${matchToDelete.team1Name} vs ${matchToDelete.team2Name}`;
+            if (val === expected) {
+              handleDeleteMatch(matchToDelete);
+            } else {
+              alert('Name mismatch, deletion cancelled');
+              setMatchToDelete(null);
+            }
+          }}
+          onCancel={() => setMatchToDelete(null)}
+        />
       )}
     </div>
   );
