@@ -9,9 +9,16 @@ interface Championship {
   name: string;
 }
 
+interface Team {
+  id: number;
+  name: string;
+}
+
 export default function ChampionshipsSection() {
   const [championships, setChampionships] = useState<Championship[]>([]);
   const [newChampionshipName, setNewChampionshipName] = useState('');
+  const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [champToDelete, setChampToDelete] = useState<Championship | null>(null);
@@ -44,6 +51,7 @@ export default function ChampionshipsSection() {
 
   useEffect(() => {
     fetchChampionships();
+    fetchTeams();
   }, []);
 
   const fetchChampionships = async () => {
@@ -56,6 +64,17 @@ export default function ChampionshipsSection() {
     }
   };
 
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch('/api/teams');
+      const data = await res.json();
+      setAvailableTeams(data);
+    } catch (err) {
+      // teams are optional for championship creation; surface as warning in form
+      console.error('Failed to load teams for championship creation');
+    }
+  };
+
   const handleAddChampionship = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChampionshipName.trim()) return;
@@ -65,13 +84,14 @@ export default function ChampionshipsSection() {
       const res = await fetch('/api/championships', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newChampionshipName }),
+        body: JSON.stringify({ name: newChampionshipName, teamIds: selectedTeamIds }),
       });
 
       if (res.ok) {
         const newChampionship = await res.json();
         setChampionships([...championships, newChampionship]);
         setNewChampionshipName('');
+        setSelectedTeamIds([]);
       } else {
         const error = await res.json();
         setError(error.error || 'Failed to add championship');
@@ -116,6 +136,43 @@ export default function ChampionshipsSection() {
           >
             {loading ? '⏳ Adding...' : '➕ Add Championship'}
           </button>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Select teams participating in this championship
+          </label>
+          {availableTeams.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No teams available yet. Create teams first in the Teams section, then create a championship.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+              {availableTeams.map((team) => {
+                const checked = selectedTeamIds.includes(team.id);
+                return (
+                  <label key={team.id} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                      checked={checked}
+                      onChange={() => {
+                        setSelectedTeamIds((prev) =>
+                          checked
+                            ? prev.filter((id) => id !== team.id)
+                            : [...prev, team.id]
+                        );
+                      }}
+                    />
+                    <span>{team.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            You can only create matches between teams selected here.
+          </p>
         </div>
       </form>
 

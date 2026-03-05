@@ -58,6 +58,15 @@ async function initializeDatabase(database: Pool) {
       "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS championship_teams (
+      "championshipId" INTEGER NOT NULL,
+      "teamId" INTEGER NOT NULL,
+      "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY ("championshipId", "teamId"),
+      FOREIGN KEY ("championshipId") REFERENCES championships(id) ON DELETE CASCADE,
+      FOREIGN KEY ("teamId") REFERENCES teams(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS matches (
       id SERIAL PRIMARY KEY,
       "championshipId" INTEGER NOT NULL,
@@ -127,6 +136,22 @@ async function initializeDatabase(database: Pool) {
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "nonStrikerName" TEXT;
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS fancy1 TEXT;
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS fancy2 TEXT;
+
+    CREATE INDEX IF NOT EXISTS idx_championship_teams_championshipId
+      ON championship_teams("championshipId");
+    CREATE INDEX IF NOT EXISTS idx_championship_teams_teamId
+      ON championship_teams("teamId");
+
+    -- backfill championship_teams for existing data based on matches
+    INSERT INTO championship_teams("championshipId", "teamId")
+    SELECT DISTINCT "championshipId", "team1Id" AS "teamId"
+    FROM matches
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO championship_teams("championshipId", "teamId")
+    SELECT DISTINCT "championshipId", "team2Id" AS "teamId"
+    FROM matches
+    ON CONFLICT DO NOTHING;
   `);
 }
 

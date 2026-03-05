@@ -23,9 +23,10 @@ interface Team {
 
 interface MatchesSectionProps {
   championshipId: number;
+  teamsVersion?: number;
 }
 
-export default function MatchesSection({ championshipId }: MatchesSectionProps) {
+export default function MatchesSection({ championshipId, teamsVersion }: MatchesSectionProps) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -43,15 +44,15 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
   useEffect(() => {
     fetchTeams();
     fetchMatches();
-  }, [championshipId]);
+  }, [championshipId, teamsVersion]);
 
   const fetchTeams = async () => {
     try {
-      const res = await fetch('/api/teams');
+      const res = await fetch(`/api/championships/${championshipId}/teams`);
       const data = await res.json();
       setTeams(data);
     } catch (err) {
-      setError('Failed to load teams');
+      setError('Failed to load teams for this championship');
     }
   };
 
@@ -67,6 +68,10 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
 
   const handleAddMatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (teams.length === 0) {
+      setError('This championship has no teams. Create a championship with teams before adding matches.');
+      return;
+    }
     if (
       !formData.team1Id ||
       !formData.team2Id ||
@@ -75,6 +80,11 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
       !formData.matchType
     ) {
       setError('All fields are required');
+      return;
+    }
+
+    if (formData.team1Id === formData.team2Id) {
+      setError('Team 1 and Team 2 must be different');
       return;
     }
 
@@ -145,8 +155,16 @@ export default function MatchesSection({ championshipId }: MatchesSectionProps) 
           </span>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-all transform hover:scale-105"
+          onClick={() => {
+            if (teams.length === 0) {
+              setError('This championship has no teams. Create a championship with teams before adding matches.');
+              setShowForm(false);
+            } else {
+              setError('');
+              setShowForm(!showForm);
+            }
+          }}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-all transform hover:scale-105 disabled:opacity-50"
         >
           {showForm ? '✕ Cancel' : '+ Add Match'}
         </button>
