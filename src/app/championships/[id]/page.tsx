@@ -61,7 +61,7 @@ export default function ChampionshipPage({
       setTeamsSuccess('');
       try {
         const [allTeamsRes, champTeamsRes] = await Promise.all([
-          fetch('/api/teams'),
+          fetch('/api/teams?all=true'),
           fetch(`/api/championships/${id}/teams`),
         ]);
 

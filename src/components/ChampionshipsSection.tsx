@@ -66,7 +66,7 @@ export default function ChampionshipsSection() {
 
   const fetchTeams = async () => {
     try {
-      const res = await fetch('/api/teams');
+      const res = await fetch('/api/teams?all=true');
       const data = await res.json();
       setAvailableTeams(data);
     } catch (err) {

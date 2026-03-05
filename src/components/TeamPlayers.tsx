@@ -31,6 +31,10 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [editingPlayerId, setEditingPlayerId] = useState<number | null>(null);
+  const [editPlayerName, setEditPlayerName] = useState('');
+  const [editPlayerType, setEditPlayerType] = useState<PlayerType>('all rounder');
 
   useEffect(() => {
     fetchPlayers();
@@ -41,6 +45,7 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
       const res = await fetch(`/api/teams/${teamId}/players`);
       const data = await res.json();
       setPlayers(data);
+      setError('');
     } catch (err) {
       setError('Failed to load players');
     }
@@ -65,12 +70,15 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
         setNewPlayerType('all rounder');
         setShowForm(false);
         setError('');
+        setSuccess('Player added successfully');
       } else {
         const error = await res.json();
         setError(error.error || 'Failed to add player');
+        setSuccess('');
       }
     } catch (err) {
       setError('Failed to add player');
+      setSuccess('');
     } finally {
       setLoading(false);
     }
@@ -86,11 +94,68 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
 
       if (res.ok) {
         setPlayers(players.filter((p) => p.id !== playerId));
+        setSuccess('Player deleted successfully');
+        setError('');
       } else {
         setError('Failed to delete player');
+        setSuccess('');
       }
     } catch (err) {
       setError('Failed to delete player');
+      setSuccess('');
+    }
+  };
+
+  const startEditPlayer = (player: Player) => {
+    setEditingPlayerId(player.id);
+    setEditPlayerName(player.name);
+    setEditPlayerType((player.playerType as PlayerType) || 'all rounder');
+    setError('');
+    setSuccess('');
+  };
+
+  const cancelEditPlayer = () => {
+    setEditingPlayerId(null);
+    setEditPlayerName('');
+    setEditPlayerType('all rounder');
+  };
+
+  const saveEditPlayer = async (playerId: number) => {
+    if (!editPlayerName.trim()) {
+      setError('Player name is required');
+      setSuccess('');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/teams/${teamId}/players/${playerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editPlayerName,
+          playerType: editPlayerType,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to update player');
+        setSuccess('');
+        return;
+      }
+
+      setPlayers((prev) =>
+        prev.map((p) => (p.id === playerId ? data : p))
+      );
+      setEditingPlayerId(null);
+      setEditPlayerName('');
+      setEditPlayerType('all rounder');
+      setError('');
+      setSuccess('Player updated successfully');
+    } catch (err) {
+      setError('Failed to update player');
+      setSuccess('');
     }
   };
 
@@ -121,6 +186,13 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
         <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 border border-red-200 flex items-start gap-3">
           <span className="text-lg">⚠️</span>
           <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 text-green-700 p-3 rounded-lg mb-4 border border-green-200 flex items-start gap-3">
+          <span className="text-lg">✅</span>
+          <span>{success}</span>
         </div>
       )}
 
@@ -169,21 +241,79 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
               key={player.id}
               className="border border-gray-200 p-4 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 hover:shadow-md transition-all"
             >
-              <div className="flex items-start justify-between mb-2">
-                <span className="font-bold text-gray-800">{player.name}</span>
-                <button
-                  onClick={() => handleDeletePlayer(player.id)}
-                  className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 font-semibold transition-colors"
-                >
-                  🗑️
-                </button>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-lg">{getPlayerTypeEmoji(player.playerType)}</span>
-                <span className="text-sm font-semibold text-gray-600 capitalize bg-gray-200 px-2 py-1 rounded">
-                  {player.playerType}
-                </span>
-              </div>
+              {editingPlayerId === player.id ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      Player Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editPlayerName}
+                      onChange={(e) => setEditPlayerName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      Player Type
+                    </label>
+                    <select
+                      value={editPlayerType}
+                      onChange={(e) => setEditPlayerType(e.target.value as PlayerType)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    >
+                      {PLAYER_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.emoji} {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={cancelEditPlayer}
+                      className="px-3 py-1 rounded-lg border border-gray-300 text-gray-700 text-xs hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => saveEditPlayer(player.id)}
+                      className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700 font-semibold"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="font-bold text-gray-800">{player.name}</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => startEditPlayer(player)}
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 font-semibold transition-colors"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeletePlayer(player.id)}
+                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 font-semibold transition-colors"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-lg">{getPlayerTypeEmoji(player.playerType)}</span>
+                    <span className="text-sm font-semibold text-gray-600 capitalize bg-gray-200 px-2 py-1 rounded">
+                      {player.playerType}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

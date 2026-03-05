@@ -11,23 +11,40 @@ interface Team {
 
 export default function TeamsSection() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
   const [newTeamName, setNewTeamName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
 
   useEffect(() => {
     fetchTeams();
-  }, []);
+  }, [page]);
 
   const fetchTeams = async () => {
     try {
-      const res = await fetch('/api/teams');
+      setListLoading(true);
+      const res = await fetch(`/api/teams?page=${page}&limit=${limit}`);
       const data = await res.json();
-      setTeams(data);
+      if (!res.ok) {
+        setError(data.error || 'Failed to load teams');
+        setTeams([]);
+        setTotalPages(1);
+        return;
+      }
+      setTeams(data.teams || []);
+      setTotalPages(data.totalPages || 1);
+      setError('');
     } catch (err) {
       setError('Failed to load teams');
+      setTeams([]);
+      setTotalPages(1);
+    } finally {
+      setListLoading(false);
     }
   };
 
@@ -122,6 +139,10 @@ export default function TeamsSection() {
         </div>
       </form>
 
+      {listLoading && (
+        <div className="text-sm text-gray-500 mb-4">Loading teams...</div>
+      )}
+
       <div className="space-y-3">
         {teams.map((team) => (
           <div key={team.id} className="relative">
@@ -150,6 +171,29 @@ export default function TeamsSection() {
           </div>
         ))}
       </div>
+
+      {teams.length > 0 && (
+        <div className="flex items-center justify-between mt-6">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50 hover:bg-gray-50"
+          >
+            ← Previous
+          </button>
+          <div className="text-sm text-gray-600">
+            Page <span className="font-semibold">{page}</span> of{' '}
+            <span className="font-semibold">{totalPages}</span>
+          </div>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50 hover:bg-gray-50"
+          >
+            Next →
+          </button>
+        </div>
+      )}
 
       {teams.length === 0 && (
         <div className="text-center py-12">
