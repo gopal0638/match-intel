@@ -14,6 +14,8 @@ interface Match {
   team2Id: number;
   team1Name: string;
   team2Name: string;
+  tossWinnerTeamId?: number | null;
+  tossDecision?: string | null;
 }
 
 interface MatchEvent {
@@ -33,6 +35,15 @@ interface MatchEvent {
   eventDescription: string | null;
   hasComment: number;
   eventComment: string | null;
+  inningsNumber?: number;
+  runsScored?: number;
+  extraRuns?: number;
+  isWide?: number;
+  isNoBall?: number;
+  isBye?: number;
+  isLegBye?: number;
+  isWicket?: number;
+  isInningsComplete?: number;
 }
 
 interface BallByBallEventsProps {
@@ -44,6 +55,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
   const [team1Players, setTeam1Players] = useState<Player[]>([]);
   const [team2Players, setTeam2Players] = useState<Player[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]);
+  const [inningsNumber, setInningsNumber] = useState<number>(1);
+  const [scoreboard, setScoreboard] = useState<
+    { inningsNumber: number; totalRuns: number; wickets: number; overs: string; extras: number; runRate: number }[]
+  >([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,13 +78,22 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     eventDescription: '',
     hasComment: false,
     eventComment: '',
+    runsScored: 0,
+    extraRuns: 0,
+    isWide: false,
+    isNoBall: false,
+    isBye: false,
+    isLegBye: false,
+    isWicket: false,
+    isInningsComplete: false,
   });
 
   useEffect(() => {
     fetchMatchDetails();
     fetchEvents();
+    fetchScoreboard();
     // Initialize with first ball
-        setFormData(prev => ({ ...prev, ballNumber: '0.1' }));
+    setFormData(prev => ({ ...prev, ballNumber: '0.1' }));
   }, [matchId]);
 
   const fetchMatchDetails = async () => {
@@ -79,6 +103,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       setMatch(data.match);
       setTeam1Players(data.team1Players);
       setTeam2Players(data.team2Players);
+      // default innings based on whether any second innings events exist later
     } catch (err) {
       setError('Failed to load match details');
     }
@@ -92,8 +117,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       // Update ball number to next ball after fetching
       if (data.length > 0) {
         const lastEvent = data[data.length - 1];
-        const [over, ball] = lastEvent.ballNumber.split('.').map(Number);
-        const nextBall = ball === 6 ? `${over + 1}.1` : `${over}.${ball + 1}`;
+        const nextBall = getNextBallNumber(data);
         setFormData(prev => ({
           ...prev,
           ballNumber: nextBall,
@@ -101,7 +125,22 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           eventDescription: '',
           hasComment: false,
           eventComment: '',
+          runsScored: 0,
+          extraRuns: 0,
+          isWide: false,
+          isNoBall: false,
+          isBye: false,
+          isLegBye: false,
+          isWicket: false,
+          isInningsComplete: false,
         }));
+        // set innings to the latest innings present
+        const maxInnings = data.reduce(
+          (max: number, ev: MatchEvent) =>
+            Math.max(max, ev.inningsNumber || 1),
+          1
+        );
+        setInningsNumber(maxInnings);
       }
     } catch (err) {
       setError('Failed to load match events');
@@ -109,13 +148,31 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
   };
 
   const getNextBallNumber = (eventList: MatchEvent[]) => {
-    if (eventList.length === 0) return '0.1';
-    const lastEvent = eventList[eventList.length - 1];
+    // Find last legal delivery (not wide or no-ball) for current innings
+    const legalEvents = eventList.filter(
+      (e) =>
+        (e.inningsNumber || 1) === inningsNumber &&
+        !(e.isWide === 1 || e.isNoBall === 1)
+    );
+    if (legalEvents.length === 0) return '0.1';
+    const lastEvent = legalEvents[legalEvents.length - 1];
     const [over, ball] = lastEvent.ballNumber.split('.').map(Number);
     if (ball === 6) {
       return `${over + 1}.1`;
     }
     return `${over}.${ball + 1}`;
+  };
+
+  const fetchScoreboard = async () => {
+    try {
+      const res = await fetch(`/api/matches/${matchId}/scoreboard`);
+      const data = await res.json();
+      if (res.ok) {
+        setScoreboard(data.innings || []);
+      }
+    } catch {
+      // non-fatal
+    }
   };
 
   const handleAddEvent = async (e: React.FormEvent) => {
@@ -135,7 +192,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          inningsNumber,
+        }),
       });
 
       if (res.ok) {
@@ -150,8 +210,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         }
         setEvents(updatedEvents);
 
-        // Keep bowler and batsman, auto-increment ball number
-        const nextBall = getNextBallNumber(updatedEvents);
+        // Keep bowler and batsman, compute next ball number based on legality
+        let nextBall: string;
+        if (resultEvent.isWide === 1 || resultEvent.isNoBall === 1) {
+          // wide/no-ball: ball count does not advance
+          nextBall = resultEvent.ballNumber;
+        } else {
+          nextBall = getNextBallNumber(updatedEvents);
+        }
         setFormData({
           ballNumber: nextBall,
           bowlerName: formData.bowlerName,
@@ -167,8 +233,17 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           eventDescription: '',
           hasComment: false,
           eventComment: '',
+          runsScored: 0,
+          extraRuns: 0,
+          isWide: false,
+          isNoBall: false,
+          isBye: false,
+          isLegBye: false,
+          isWicket: false,
+          isInningsComplete: false,
         });
         setError('');
+        fetchScoreboard();
       } else {
         const error = await res.json();
         setError(error.error || 'Failed to add event');
@@ -214,8 +289,17 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       eventDescription: event.eventDescription || '',
       hasComment: event.hasComment === 1,
       eventComment: event.eventComment || '',
+      runsScored: event.runsScored ?? 0,
+      extraRuns: event.extraRuns ?? 0,
+      isWide: event.isWide === 1,
+      isNoBall: event.isNoBall === 1,
+      isBye: event.isBye === 1,
+      isLegBye: event.isLegBye === 1,
+      isWicket: event.isWicket === 1,
+      isInningsComplete: event.isInningsComplete === 1,
     });
     setEditingEventId(event.id);
+    setInningsNumber(event.inningsNumber || 1);
   };
 
   const handleCancelEdit = () => {
@@ -259,7 +343,35 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     return <div className="text-center py-8">Loading match details...</div>;
   }
 
-  const allPlayers = [...team1Players, ...team2Players];
+  const computeBattingAndBowling = () => {
+    if (!match) {
+      return { battingPlayers: team1Players, bowlingPlayers: team2Players };
+    }
+    const { team1Id, team2Id, tossWinnerTeamId, tossDecision } = match;
+    const winner = tossWinnerTeamId || team1Id;
+    const other = winner === team1Id ? team2Id : team1Id;
+    const decision = (tossDecision || 'bat').toLowerCase();
+
+    let battingTeamId: number;
+    let bowlingTeamId: number;
+    if (decision === 'bat') {
+      battingTeamId = inningsNumber === 1 ? winner : other;
+      bowlingTeamId = inningsNumber === 1 ? other : winner;
+    } else {
+      // bowl
+      battingTeamId = inningsNumber === 1 ? other : winner;
+      bowlingTeamId = inningsNumber === 1 ? winner : other;
+    }
+
+    const battingPlayers =
+      battingTeamId === team1Id ? team1Players : team2Players;
+    const bowlingPlayers =
+      bowlingTeamId === team1Id ? team1Players : team2Players;
+
+    return { battingPlayers, bowlingPlayers };
+  };
+
+  const { battingPlayers, bowlingPlayers } = computeBattingAndBowling();
 
   return (
     <div className="space-y-6">
@@ -267,6 +379,42 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 flex items-start gap-3">
           <span className="text-xl">⚠️</span>
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Scoreboard */}
+      {scoreboard.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-4 border border-green-100">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">📋</span>
+            <h3 className="text-lg font-bold text-gray-800">Scoreboard</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            {scoreboard.map((inn) => (
+              <div
+                key={inn.inningsNumber}
+                className="border border-green-200 rounded-lg p-3 bg-gradient-to-r from-green-50 to-emerald-50"
+              >
+                <div className="font-semibold text-gray-800 mb-1">
+                  Innings {inn.inningsNumber}
+                </div>
+                <div className="flex flex-wrap gap-3 text-gray-700">
+                  <span>
+                    <strong>Runs:</strong> {inn.totalRuns}/{inn.wickets}
+                  </span>
+                  <span>
+                    <strong>Overs:</strong> {inn.overs}
+                  </span>
+                  <span>
+                    <strong>Extras:</strong> {inn.extras}
+                  </span>
+                  <span>
+                    <strong>RR:</strong> {inn.runRate}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -281,6 +429,96 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         </div>
 
         <form onSubmit={handleAddEvent} className="space-y-3">
+          {/* Toss & innings info */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-2 text-xs text-gray-700">
+            <div>
+              <span className="font-semibold mr-2">Innings:</span>
+              <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold">
+                {inningsNumber}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span>
+                Batting:{' '}
+                <strong>
+                  {battingPlayers === team1Players ? match.team1Name : match.team2Name}
+                </strong>
+              </span>
+              <span>
+                Bowling:{' '}
+                <strong>
+                  {battingPlayers === team1Players ? match.team2Name : match.team1Name}
+                </strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setInningsNumber((prev) => (prev === 1 ? 2 : 1));
+                  // reset ball number for new innings
+                  const eventsForInnings = events.filter(
+                    (e) => (e.inningsNumber || 1) === (inningsNumber === 1 ? 2 : 1)
+                  );
+                  const nextBall = getNextBallNumber(eventsForInnings);
+                  setFormData((prev) => ({
+                    ...prev,
+                    ballNumber: nextBall,
+                  }));
+                }}
+                className="px-2 py-1 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+              >
+                Switch Innings
+              </button>
+            </div>
+          </div>
+
+          {/* Extras flags */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                checked={formData.isWide}
+                onChange={(e) =>
+                  setFormData({ ...formData, isWide: e.target.checked })
+                }
+                className="w-4 h-4 accent-blue-600"
+              />
+              <span>Wide</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                checked={formData.isNoBall}
+                onChange={(e) =>
+                  setFormData({ ...formData, isNoBall: e.target.checked })
+                }
+                className="w-4 h-4 accent-blue-600"
+              />
+              <span>No Ball</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                checked={formData.isBye}
+                onChange={(e) =>
+                  setFormData({ ...formData, isBye: e.target.checked })
+                }
+                className="w-4 h-4 accent-blue-600"
+              />
+              <span>Bye</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                checked={formData.isLegBye}
+                onChange={(e) =>
+                  setFormData({ ...formData, isLegBye: e.target.checked })
+                }
+                className="w-4 h-4 accent-blue-600"
+              />
+              <span>Leg Bye</span>
+            </label>
+          </div>
+
           {/* Row 1: Ball, Bowler, Batsman, Bookmaker, Fav Team */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
             <div>
@@ -302,7 +540,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="">Select</option>
-                {allPlayers.map((player) => (
+                {bowlingPlayers.map((player) => (
                   <option key={`bowler-${player.id}`} value={player.name}>
                     {player.name}
                   </option>
@@ -318,7 +556,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="">Select</option>
-                {allPlayers.map((player) => (
+                {battingPlayers.map((player) => (
                   <option key={`batsman-${player.id}`} value={player.name}>
                     {player.name}
                   </option>
@@ -334,7 +572,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="">Select</option>
-                {allPlayers.map((player) => (
+                {battingPlayers.map((player) => (
                   <option key={`nonstriker-${player.id}`} value={player.name}>
                     {player.name}
                   </option>
@@ -409,6 +647,34 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 value={formData.finalScore}
                 onChange={(e) => setFormData({ ...formData, finalScore: e.target.value })}
                 placeholder="Score"
+                className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Runs</label>
+              <input
+                type="number"
+                min={0}
+                value={formData.runsScored}
+                onChange={(e) =>
+                  setFormData({ ...formData, runsScored: Number(e.target.value) || 0 })
+                }
+                placeholder="Batsman runs"
+                className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Extras</label>
+              <input
+                type="number"
+                min={0}
+                value={formData.extraRuns}
+                onChange={(e) =>
+                  setFormData({ ...formData, extraRuns: Number(e.target.value) || 0 })
+                }
+                placeholder="Extra runs"
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>

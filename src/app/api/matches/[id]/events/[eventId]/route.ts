@@ -46,6 +46,15 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
       eventDescription,
       hasComment,
       eventComment,
+      inningsNumber,
+      runsScored,
+      extraRuns,
+      isWide,
+      isNoBall,
+      isBye,
+      isLegBye,
+      isWicket,
+      isInningsComplete,
     } = await request.json();
 
     const db = getDb();
@@ -60,16 +69,52 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
+    const innings =
+      typeof inningsNumber === 'number' && inningsNumber >= 1
+        ? inningsNumber
+        : eventResult.rows[0].inningsNumber || 1;
+
+    const safeRunsScored = Number.isFinite(runsScored) && runsScored >= 0 ? runsScored : 0;
+    const safeExtraRuns = Number.isFinite(extraRuns) && extraRuns >= 0 ? extraRuns : 0;
+    const wide = !!isWide;
+    const noBall = !!isNoBall;
+    const bye = !!isBye;
+    const legBye = !!isLegBye;
+    const wicket = !!isWicket;
+    const inningsComplete = !!isInningsComplete;
+
     const result = await db.query(
       `UPDATE match_events
-       SET "ballNumber" = $1, "bowlerName" = $2, "batsmanName" = $3, "nonStrikerName" = $4, bookmaker = $5, "favTeam" = $6, fancy1 = $7, fancy2 = $8,
-           "ballInfo" = $9, "finalScore" = $10, "eventOccurred" = $11, "eventDescription" = $12, "hasComment" = $13, "eventComment" = $14
-       WHERE id = $15 RETURNING *`,
+       SET "ballNumber" = $1,
+           "bowlerName" = $2,
+           "batsmanName" = $3,
+           "nonStrikerName" = $4,
+           "inningsNumber" = $5,
+           bookmaker = $6,
+           "favTeam" = $7,
+           fancy1 = $8,
+           fancy2 = $9,
+           "ballInfo" = $10,
+           "finalScore" = $11,
+           "eventOccurred" = $12,
+           "eventDescription" = $13,
+           "hasComment" = $14,
+           "eventComment" = $15,
+           "runsScored" = $16,
+           "extraRuns" = $17,
+           "isWide" = $18,
+           "isNoBall" = $19,
+           "isBye" = $20,
+           "isLegBye" = $21,
+           "isWicket" = $22,
+           "isInningsComplete" = $23
+       WHERE id = $24 RETURNING *`,
       [
         ballNumber,
         bowlerName,
         batsmanName,
         nonStrikerName || null,
+        innings,
         bookmaker || null,
         favTeam || null,
         fancy1 || null,
@@ -80,6 +125,14 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
         eventDescription || null,
         hasComment ? 1 : 0,
         eventComment || null,
+        safeRunsScored,
+        safeExtraRuns,
+        wide ? 1 : 0,
+        noBall ? 1 : 0,
+        bye ? 1 : 0,
+        legBye ? 1 : 0,
+        wicket ? 1 : 0,
+        inningsComplete ? 1 : 0,
         eventId,
       ]
     );

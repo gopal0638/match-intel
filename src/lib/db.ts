@@ -74,7 +74,9 @@ async function initializeDatabase(database: Pool) {
       "team2Id" INTEGER NOT NULL,
       "matchDate" TIMESTAMP NOT NULL,
       "groundName" TEXT,
-      "matchType" TEXT
+      "matchType" TEXT,
+      "tossWinnerTeamId" INTEGER,
+      "tossDecision" TEXT
     );
 
     CREATE TABLE IF NOT EXISTS batsman_records (
@@ -116,6 +118,7 @@ async function initializeDatabase(database: Pool) {
       "bowlerName" TEXT NOT NULL,
       "batsmanName" TEXT NOT NULL,
       "nonStrikerName" TEXT,
+      "inningsNumber" INTEGER DEFAULT 1,
       bookmaker TEXT,
       "favTeam" TEXT,
       fancy1 TEXT,
@@ -126,6 +129,14 @@ async function initializeDatabase(database: Pool) {
       "eventDescription" TEXT,
       "hasComment" INTEGER DEFAULT 0,
       "eventComment" TEXT,
+      "runsScored" INTEGER DEFAULT 0,
+      "extraRuns" INTEGER DEFAULT 0,
+      "isWide" INTEGER DEFAULT 0,
+      "isNoBall" INTEGER DEFAULT 0,
+      "isBye" INTEGER DEFAULT 0,
+      "isLegBye" INTEGER DEFAULT 0,
+      "isWicket" INTEGER DEFAULT 0,
+      "isInningsComplete" INTEGER DEFAULT 0,
       "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY ("matchId") REFERENCES matches(id) ON DELETE CASCADE
     );
@@ -136,6 +147,18 @@ async function initializeDatabase(database: Pool) {
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "nonStrikerName" TEXT;
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS fancy1 TEXT;
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS fancy2 TEXT;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "inningsNumber" INTEGER DEFAULT 1;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "runsScored" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "extraRuns" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isWide" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isNoBall" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isBye" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isLegBye" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isWicket" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isInningsComplete" INTEGER DEFAULT 0;
+
+    ALTER TABLE matches ADD COLUMN IF NOT EXISTS "tossWinnerTeamId" INTEGER;
+    ALTER TABLE matches ADD COLUMN IF NOT EXISTS "tossDecision" TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_championship_teams_championshipId
       ON championship_teams("championshipId");

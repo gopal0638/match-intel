@@ -58,6 +58,54 @@ export async function GET(request: NextRequest, { params }: MatchDetailsParams) 
   }
 }
 
+export async function PUT(request: NextRequest, { params }: MatchDetailsParams) {
+  try {
+    const { id } = await params;
+    const { tossWinnerTeamId, tossDecision } = await request.json();
+
+    if (!tossWinnerTeamId || !['bat', 'bowl'].includes((tossDecision || '').toLowerCase())) {
+      return NextResponse.json(
+        { error: 'tossWinnerTeamId and valid tossDecision (bat/bowl) are required' },
+        { status: 400 }
+      );
+    }
+
+    const db = getDb();
+
+    const matchResult = await db.query(
+      'SELECT "team1Id", "team2Id" FROM matches WHERE id = $1',
+      [id]
+    );
+
+    if (matchResult.rows.length === 0) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 });
+    }
+
+    const { team1Id, team2Id } = matchResult.rows[0] as { team1Id: number; team2Id: number };
+
+    if (![team1Id, team2Id].includes(Number(tossWinnerTeamId))) {
+      return NextResponse.json(
+        { error: 'tossWinnerTeamId must be one of the match teams' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedDecision = (tossDecision as string).toLowerCase();
+
+    const updated = await db.query(
+      `UPDATE matches
+       SET "tossWinnerTeamId" = $1, "tossDecision" = $2
+       WHERE id = $3
+       RETURNING *`,
+      [tossWinnerTeamId, normalizedDecision, id]
+    );
+
+    return NextResponse.json(updated.rows[0]);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update match toss info' }, { status: 500 });
+  }
+}
+
 // DELETE handler for removing a match with name confirmation
 export async function DELETE(request: NextRequest, { params }: MatchDetailsParams) {
   try {
