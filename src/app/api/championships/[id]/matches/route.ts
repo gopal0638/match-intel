@@ -89,15 +89,27 @@ export async function POST(
     let tossWinner: number | null = null;
     let normalizedDecision: string | null = null;
 
-    if (tossWinnerTeamId !== undefined || tossDecision !== undefined) {
-      if (!tossWinnerTeamId || !tossDecision) {
+    const hasTossWinner =
+      tossWinnerTeamId !== undefined &&
+      tossWinnerTeamId !== null &&
+      tossWinnerTeamId !== '';
+    const hasTossDecision =
+      typeof tossDecision === 'string' && tossDecision.trim() !== '';
+
+    // Toss information is optional on creation.
+    // Only validate and persist it when explicitly provided.
+    if (hasTossWinner || hasTossDecision) {
+      if (!hasTossWinner || !hasTossDecision) {
         return NextResponse.json(
-          { error: 'Both tossWinnerTeamId and tossDecision are required when setting toss' },
+          {
+            error:
+              'Both tossWinnerTeamId and tossDecision are required when providing toss information',
+          },
           { status: 400 }
         );
       }
 
-      const tw = parseInt(tossWinnerTeamId, 10);
+      const tw = parseInt(String(tossWinnerTeamId), 10);
       if (!Number.isInteger(tw) || ![t1, t2].includes(tw)) {
         return NextResponse.json(
           { error: 'tossWinnerTeamId must be one of the two match teams' },

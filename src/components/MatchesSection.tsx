@@ -90,33 +90,45 @@ export default function MatchesSection({ championshipId, teamsVersion }: Matches
       return;
     }
 
-    if (!formData.tossWinnerTeamId || !formData.tossDecision) {
-      setError('Please select who won the toss and what they chose');
-      return;
-    }
+    const hasTossWinner = !!formData.tossWinnerTeamId;
+    const hasTossDecision = !!formData.tossDecision;
 
-    if (
-      formData.tossWinnerTeamId !== formData.team1Id &&
-      formData.tossWinnerTeamId !== formData.team2Id
-    ) {
-      setError('Toss winner must be one of the two teams');
-      return;
+    // Toss information is optional when creating a match.
+    // Only require and validate toss fields when the user has started filling them.
+    if (hasTossWinner || hasTossDecision) {
+      if (!hasTossWinner || !hasTossDecision) {
+        setError('If you provide toss info, please select both the winner and the decision');
+        return;
+      }
+
+      if (
+        formData.tossWinnerTeamId !== formData.team1Id &&
+        formData.tossWinnerTeamId !== formData.team2Id
+      ) {
+        setError('Toss winner must be one of the two teams');
+        return;
+      }
     }
 
     setLoading(true);
     try {
+      const body: any = {
+        team1Id: parseInt(formData.team1Id),
+        team2Id: parseInt(formData.team2Id),
+        matchDate: formData.matchDate,
+        groundName: formData.groundName,
+        matchType: formData.matchType,
+      };
+
+      if (hasTossWinner && hasTossDecision) {
+        body.tossWinnerTeamId = parseInt(formData.tossWinnerTeamId);
+        body.tossDecision = formData.tossDecision;
+      }
+
       const res = await fetch(`/api/championships/${championshipId}/matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          team1Id: parseInt(formData.team1Id),
-          team2Id: parseInt(formData.team2Id),
-          matchDate: formData.matchDate,
-          groundName: formData.groundName,
-          matchType: formData.matchType,
-          tossWinnerTeamId: parseInt(formData.tossWinnerTeamId),
-          tossDecision: formData.tossDecision,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
