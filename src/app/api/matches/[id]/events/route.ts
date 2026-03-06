@@ -202,7 +202,7 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
         bookmaker, "favTeam", fancy1, fancy2, "ballInfo",
         "finalScore", "eventOccurred", "eventDescription", "hasComment", "eventComment",
         "runsScored", "extraRuns", "isWide", "isNoBall", "isBye", "isLegBye", "isWicket", "isInningsComplete"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *`,
       [
         id,
         ballNumber,
