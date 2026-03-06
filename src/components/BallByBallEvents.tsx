@@ -30,7 +30,6 @@ interface MatchEvent {
   fancy1: string | null;
   fancy2: string | null;
   ballInfo: string | null;
-  finalScore: string | null;
   eventOccurred: number;
   eventDescription: string | null;
   hasComment: number;
@@ -48,6 +47,34 @@ interface MatchEvent {
 
 interface BallByBallEventsProps {
   matchId: number;
+}
+
+function computeRunningTotals(events: MatchEvent[]) {
+  const totalsByEvent = new Map<number, number>();
+  const totalsByInnings = new Map<number, number>();
+
+  const sorted = [...events].sort((a, b) => {
+    const inningsA = a.inningsNumber || 1;
+    const inningsB = b.inningsNumber || 1;
+    if (inningsA !== inningsB) return inningsA - inningsB;
+
+    const [overA, ballA] = a.ballNumber.split('.').map(Number);
+    const [overB, ballB] = b.ballNumber.split('.').map(Number);
+
+    if (overA !== overB) return overA - overB;
+    return ballA - ballB;
+  });
+
+  for (const ev of sorted) {
+    const innings = ev.inningsNumber || 1;
+    const prevTotal = totalsByInnings.get(innings) ?? 0;
+    const runsThisBall = (ev.runsScored ?? 0) + (ev.extraRuns ?? 0);
+    const totalForEvent = prevTotal + runsThisBall;
+    totalsByInnings.set(innings, totalForEvent);
+    totalsByEvent.set(ev.id, totalForEvent);
+  }
+
+  return totalsByEvent;
 }
 
 export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
@@ -73,7 +100,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     fancy1: '',
     fancy2: '',
     ballInfo: '',
-    finalScore: '',
+    ballInfoNote: '',
     eventOccurred: false,
     eventDescription: '',
     hasComment: false,
@@ -82,7 +109,6 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     extraRuns: 0,
     isWide: false,
     isNoBall: false,
-    isBye: false,
     isLegBye: false,
     isWicket: false,
     isInningsComplete: false,
@@ -116,11 +142,12 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       setEvents(data);
       // Update ball number to next ball after fetching
       if (data.length > 0) {
-        const lastEvent = data[data.length - 1];
         const nextBall = getNextBallNumber(data);
         setFormData(prev => ({
           ...prev,
           ballNumber: nextBall,
+          ballInfo: '',
+          ballInfoNote: '',
           eventOccurred: false,
           eventDescription: '',
           hasComment: false,
@@ -129,7 +156,6 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           extraRuns: 0,
           isWide: false,
           isNoBall: false,
-          isBye: false,
           isLegBye: false,
           isWicket: false,
           isInningsComplete: false,
@@ -175,6 +201,20 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     }
   };
 
+  const buildBallInfo = (
+    note: string,
+    isWide: boolean,
+    isNoBall: boolean,
+    isLegBye: boolean
+  ) => {
+    const parts: string[] = [];
+    if (note.trim()) parts.push(note.trim());
+    if (isWide) parts.push('Wide');
+    if (isNoBall) parts.push('No Ball');
+    if (isLegBye) parts.push('Leg Bye');
+    return parts.join(' | ');
+  };
+
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.ballNumber || !formData.bowlerName || !formData.batsmanName) {
@@ -210,7 +250,31 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         }
         setEvents(updatedEvents);
 
-        // Keep bowler and batsman, compute next ball number based on legality
+        // Determine next striker/non-striker based on runs and over completion
+        let nextBatsman = formData.batsmanName;
+        let nextNonStriker = formData.nonStrikerName;
+        const isWide = resultEvent.isWide === 1;
+        const isNoBall = resultEvent.isNoBall === 1;
+        const runs = resultEvent.runsScored ?? 0;
+        const [overStr, ballStr] = resultEvent.ballNumber.split('.');
+        const ballNum = Number(ballStr) || 0;
+
+        if (nextBatsman && nextNonStriker) {
+          const shouldSwapForRuns =
+            !isWide && !isNoBall && (runs === 1 || runs === 3);
+          const isLegalDelivery = !isWide && !isNoBall;
+          const isEndOfOver = isLegalDelivery && ballNum === 6;
+
+          if (shouldSwapForRuns) {
+            [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
+          }
+
+          if (isEndOfOver) {
+            [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
+          }
+        }
+
+        // Keep bowler and favourite team, compute next ball number based on legality
         let nextBall: string;
         if (resultEvent.isWide === 1 || resultEvent.isNoBall === 1) {
           // wide/no-ball: ball count does not advance
@@ -221,14 +285,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         setFormData({
           ballNumber: nextBall,
           bowlerName: formData.bowlerName,
-          batsmanName: formData.batsmanName,
-          nonStrikerName: '',
+          batsmanName: nextBatsman,
+          nonStrikerName: nextNonStriker,
           bookmaker: '',
-          favTeam: '',
+          favTeam: formData.favTeam,
           fancy1: '',
           fancy2: '',
           ballInfo: '',
-          finalScore: '',
+          ballInfoNote: '',
           eventOccurred: false,
           eventDescription: '',
           hasComment: false,
@@ -237,7 +301,6 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           extraRuns: 0,
           isWide: false,
           isNoBall: false,
-          isBye: false,
           isLegBye: false,
           isWicket: false,
           isInningsComplete: false,
@@ -284,7 +347,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       fancy1: event.fancy1 || '',
       fancy2: event.fancy2 || '',
       ballInfo: event.ballInfo || '',
-      finalScore: event.finalScore || '',
+      ballInfoNote: event.ballInfo || '',
       eventOccurred: event.eventOccurred === 1,
       eventDescription: event.eventDescription || '',
       hasComment: event.hasComment === 1,
@@ -293,7 +356,6 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       extraRuns: event.extraRuns ?? 0,
       isWide: event.isWide === 1,
       isNoBall: event.isNoBall === 1,
-      isBye: event.isBye === 1,
       isLegBye: event.isLegBye === 1,
       isWicket: event.isWicket === 1,
       isInningsComplete: event.isInningsComplete === 1,
@@ -308,13 +370,13 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       ballNumber: getNextBallNumber(events),
       bowlerName: formData.bowlerName,
       batsmanName: formData.batsmanName,
-      nonStrikerName: '',
+      nonStrikerName: formData.nonStrikerName,
       bookmaker: '',
-      favTeam: '',
+      favTeam: formData.favTeam,
       fancy1: '',
       fancy2: '',
       ballInfo: '',
-      finalScore: '',
+      ballInfoNote: '',
       eventOccurred: false,
       eventDescription: '',
       hasComment: false,
@@ -338,6 +400,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       `${bowler} ${nonStriker}`.includes(search)
     );
   });
+
+  const eventRunningTotals = computeRunningTotals(events);
 
   if (!match) {
     return <div className="text-center py-8">Loading match details...</div>;
@@ -472,14 +536,24 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           </div>
 
           {/* Extras flags */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
               <input
                 type="checkbox"
                 checked={formData.isWide}
-                onChange={(e) =>
-                  setFormData({ ...formData, isWide: e.target.checked })
-                }
+                onChange={(e) => {
+                  const isWide = e.target.checked;
+                  setFormData((prev) => ({
+                    ...prev,
+                    isWide,
+                    ballInfo: buildBallInfo(
+                      prev.ballInfoNote,
+                      isWide,
+                      prev.isNoBall,
+                      prev.isLegBye
+                    ),
+                  }));
+                }}
                 className="w-4 h-4 accent-blue-600"
               />
               <span>Wide</span>
@@ -488,9 +562,19 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
               <input
                 type="checkbox"
                 checked={formData.isNoBall}
-                onChange={(e) =>
-                  setFormData({ ...formData, isNoBall: e.target.checked })
-                }
+                onChange={(e) => {
+                  const isNoBall = e.target.checked;
+                  setFormData((prev) => ({
+                    ...prev,
+                    isNoBall,
+                    ballInfo: buildBallInfo(
+                      prev.ballInfoNote,
+                      prev.isWide,
+                      isNoBall,
+                      prev.isLegBye
+                    ),
+                  }));
+                }}
                 className="w-4 h-4 accent-blue-600"
               />
               <span>No Ball</span>
@@ -498,21 +582,20 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
             <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
               <input
                 type="checkbox"
-                checked={formData.isBye}
-                onChange={(e) =>
-                  setFormData({ ...formData, isBye: e.target.checked })
-                }
-                className="w-4 h-4 accent-blue-600"
-              />
-              <span>Bye</span>
-            </label>
-            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
-              <input
-                type="checkbox"
                 checked={formData.isLegBye}
-                onChange={(e) =>
-                  setFormData({ ...formData, isLegBye: e.target.checked })
-                }
+                onChange={(e) => {
+                  const isLegBye = e.target.checked;
+                  setFormData((prev) => ({
+                    ...prev,
+                    isLegBye,
+                    ballInfo: buildBallInfo(
+                      prev.ballInfoNote,
+                      prev.isWide,
+                      prev.isNoBall,
+                      isLegBye
+                    ),
+                  }));
+                }}
                 className="w-4 h-4 accent-blue-600"
               />
               <span>Leg Bye</span>
@@ -633,20 +716,21 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
               <label className="block text-xs font-semibold text-gray-700 mb-1">Ball Info</label>
               <input
                 type="text"
-                value={formData.ballInfo}
-                onChange={(e) => setFormData({ ...formData, ballInfo: e.target.value })}
+                value={formData.ballInfoNote}
+                onChange={(e) => {
+                  const note = e.target.value;
+                  setFormData((prev) => ({
+                    ...prev,
+                    ballInfoNote: note,
+                    ballInfo: buildBallInfo(
+                      note,
+                      prev.isWide,
+                      prev.isNoBall,
+                      prev.isLegBye
+                    ),
+                  }));
+                }}
                 placeholder="Ball Info"
-                className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Final Score</label>
-              <input
-                type="text"
-                value={formData.finalScore}
-                onChange={(e) => setFormData({ ...formData, finalScore: e.target.value })}
-                placeholder="Score"
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
@@ -747,7 +831,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
 
         {filteredEvents.length > 0 ? (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {filteredEvents.map((event) => (
+            {[...filteredEvents].reverse().map((event) => (
               <div
                 key={event.id}
                 className={`border p-3 rounded-lg transition-all text-sm ${
@@ -814,16 +898,20 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 </div>
 
                 {/* Additional details on separate lines if present */}
-                {(event.ballInfo || event.finalScore || event.eventOccurred === 1 || event.hasComment === 1) && (
+                {(event.ballInfo ||
+                  eventRunningTotals.get(event.id) !== undefined ||
+                  event.eventOccurred === 1 ||
+                  event.hasComment === 1) && (
                   <div className="mt-2 pt-2 border-t border-gray-300 space-y-1">
                     {event.ballInfo && (
                       <p className="text-xs text-gray-700">
                         <span className="font-semibold">BI:</span> {event.ballInfo}
                       </p>
                     )}
-                    {event.finalScore && (
+                    {eventRunningTotals.get(event.id) !== undefined && (
                       <p className="text-xs text-gray-700">
-                        <span className="font-semibold">Score:</span> {event.finalScore}
+                        <span className="font-semibold">Score:</span>{' '}
+                        {eventRunningTotals.get(event.id)}
                       </p>
                     )}
                     {event.eventOccurred === 1 && (

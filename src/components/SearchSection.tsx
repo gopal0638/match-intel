@@ -180,7 +180,7 @@ export default function SearchSection() {
                 <div className="text-xs text-gray-500 uppercase font-semibold">Details</div>
                 <div className="text-xs text-gray-700 mt-1">
                   <div><strong>Championship:</strong> {r.championshipName}</div>
-                  <div><strong>Final:</strong> {r.finalScore || '—'}</div>
+                  <div><strong>Score:</strong> {r.runningTotal ?? '—'}</div>
                   {r.eventDescription && <div className="text-xs italic mt-2 text-gray-600">{r.eventDescription}</div>}
                 </div>
               </div>

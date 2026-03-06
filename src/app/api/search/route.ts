@@ -61,10 +61,28 @@ export async function GET(request: NextRequest) {
 
     // Select useful fields and join match/championship/team info for context
     const sql = `
-      SELECT me.id, me."matchId", me."ballNumber", me."bowlerName", me."batsmanName", me."nonStrikerName",
-             me."eventDescription", me."finalScore", m."matchDate", m."groundName", m."championshipId",
-             c.name as "championshipName",
-             t1.name as "team1Name", t2.name as "team2Name"
+      SELECT
+        me.id,
+        me."matchId",
+        me."inningsNumber",
+        me."ballNumber",
+        me."bowlerName",
+        me."batsmanName",
+        me."nonStrikerName",
+        me."eventDescription",
+        SUM(me."runsScored" + me."extraRuns") OVER (
+          PARTITION BY me."matchId", me."inningsNumber"
+          ORDER BY
+            CAST(SPLIT_PART(me."ballNumber", '.', 1) AS INTEGER),
+            CAST(SPLIT_PART(me."ballNumber", '.', 2) AS INTEGER)
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS "runningTotal",
+        m."matchDate",
+        m."groundName",
+        m."championshipId",
+        c.name as "championshipName",
+        t1.name as "team1Name",
+        t2.name as "team2Name"
       FROM match_events me
       JOIN matches m ON me."matchId" = m.id
       LEFT JOIN championships c ON m."championshipId" = c.id
