@@ -38,6 +38,8 @@ export default function MatchesSection({ championshipId, teamsVersion }: Matches
     matchDate: '',
     groundName: '',
     matchType: '',
+    tossWinnerTeamId: '',
+    tossDecision: '',
   });
   const [matchToDelete, setMatchToDelete] = useState<Match | null>(null);
 
@@ -88,6 +90,19 @@ export default function MatchesSection({ championshipId, teamsVersion }: Matches
       return;
     }
 
+    if (!formData.tossWinnerTeamId || !formData.tossDecision) {
+      setError('Please select who won the toss and what they chose');
+      return;
+    }
+
+    if (
+      formData.tossWinnerTeamId !== formData.team1Id &&
+      formData.tossWinnerTeamId !== formData.team2Id
+    ) {
+      setError('Toss winner must be one of the two teams');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`/api/championships/${championshipId}/matches`, {
@@ -99,11 +114,21 @@ export default function MatchesSection({ championshipId, teamsVersion }: Matches
           matchDate: formData.matchDate,
           groundName: formData.groundName,
           matchType: formData.matchType,
+          tossWinnerTeamId: parseInt(formData.tossWinnerTeamId),
+          tossDecision: formData.tossDecision,
         }),
       });
 
       if (res.ok) {
-        setFormData({ team1Id: '', team2Id: '', matchDate: '', groundName: '', matchType: '' });
+        setFormData({
+          team1Id: '',
+          team2Id: '',
+          matchDate: '',
+          groundName: '',
+          matchType: '',
+          tossWinnerTeamId: '',
+          tossDecision: '',
+        });
         setShowForm(false);
         fetchMatches();
       } else {
@@ -245,6 +270,59 @@ export default function MatchesSection({ championshipId, teamsVersion }: Matches
                 <option value="T20">T20</option>
               </select>
             </div>
+
+            {/* Toss selection */}
+            {formData.team1Id && formData.team2Id && (
+              <div className="border-t border-blue-200 pt-4 mt-2">
+                <p className="text-sm font-semibold text-gray-800 mb-2">
+                  Toss
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      Who won the toss?
+                    </label>
+                    <select
+                      value={formData.tossWinnerTeamId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, tossWinnerTeamId: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    >
+                      <option value="">Select toss winner</option>
+                      {teams
+                        .filter(
+                          (t) =>
+                            t.id.toString() === formData.team1Id ||
+                            t.id.toString() === formData.team2Id
+                        )
+                        .map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                      What did they choose?
+                    </label>
+                    <select
+                      value={formData.tossDecision}
+                      onChange={(e) =>
+                        setFormData({ ...formData, tossDecision: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      disabled={!formData.tossWinnerTeamId}
+                    >
+                      <option value="">Select decision</option>
+                      <option value="bat">Bat</option>
+                      <option value="bowl">Bowl</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <button

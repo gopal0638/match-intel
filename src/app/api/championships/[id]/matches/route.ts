@@ -31,7 +31,15 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const { team1Id, team2Id, matchDate, groundName, matchType } = await request.json();
+    const {
+      team1Id,
+      team2Id,
+      matchDate,
+      groundName,
+      matchType,
+      tossWinnerTeamId,
+      tossDecision,
+    } = await request.json();
 
     if (!team1Id || !team2Id || !matchDate || !groundName || !matchType) {
       return NextResponse.json(
@@ -78,9 +86,40 @@ export async function POST(
       );
     }
 
+    let tossWinner: number | null = null;
+    let normalizedDecision: string | null = null;
+
+    if (tossWinnerTeamId !== undefined || tossDecision !== undefined) {
+      if (!tossWinnerTeamId || !tossDecision) {
+        return NextResponse.json(
+          { error: 'Both tossWinnerTeamId and tossDecision are required when setting toss' },
+          { status: 400 }
+        );
+      }
+
+      const tw = parseInt(tossWinnerTeamId, 10);
+      if (!Number.isInteger(tw) || ![t1, t2].includes(tw)) {
+        return NextResponse.json(
+          { error: 'tossWinnerTeamId must be one of the two match teams' },
+          { status: 400 }
+        );
+      }
+
+      const decision = (tossDecision as string).toLowerCase();
+      if (!['bat', 'bowl'].includes(decision)) {
+        return NextResponse.json(
+          { error: 'tossDecision must be either "bat" or "bowl"' },
+          { status: 400 }
+        );
+      }
+
+      tossWinner = tw;
+      normalizedDecision = decision;
+    }
+
     const result = await db.query(
-      'INSERT INTO matches ("championshipId", "team1Id", "team2Id", "matchDate", "groundName", "matchType") VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-      [id, t1, t2, matchDate, groundName, matchType]
+      'INSERT INTO matches ("championshipId", "team1Id", "team2Id", "matchDate", "groundName", "matchType", "tossWinnerTeamId", "tossDecision") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [id, t1, t2, matchDate, groundName, matchType, tossWinner, normalizedDecision]
     );
 
     return NextResponse.json(result.rows[0], { status: 201 });
