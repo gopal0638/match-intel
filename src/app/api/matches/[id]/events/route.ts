@@ -162,6 +162,7 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
       isLegBye,
       isWicket,
       isInningsComplete,
+      dismissalType,
     } = await request.json();
 
     if (!ballNumber || !bowlerName || !batsmanName) {
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
     }
 
     const safeRunsScored = Number.isFinite(runsScored) && runsScored >= 0 ? runsScored : 0;
-    const safeExtraRuns = Number.isFinite(extraRuns) && extraRuns >= 0 ? extraRuns : 0;
+    let safeExtraRuns = Number.isFinite(extraRuns) && extraRuns >= 0 ? extraRuns : 0;
     const wide = !!isWide;
     const noBall = !!isNoBall;
     const bye = !!isBye;
@@ -194,14 +195,19 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
     const wicket = !!isWicket;
     const inningsComplete = !!isInningsComplete;
 
+    // Wide/No Ball: backend adds 1 as base extra; user extras (e.g. 4 or 6) are added on top
+    if (wide || noBall) {
+      safeExtraRuns += 1;
+    }
+
     const db = getDb();
     const result = await db.query(
       `INSERT INTO match_events (
         "matchId", "ballNumber", "bowlerName", "batsmanName", "nonStrikerName", "inningsNumber",
         bookmaker, "favTeam", fancy1, fancy2, "ballInfo",
         "finalScore", "eventOccurred", "eventDescription", "hasComment", "eventComment",
-        "runsScored", "extraRuns", "isWide", "isNoBall", "isBye", "isLegBye", "isWicket", "isInningsComplete"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *`,
+        "runsScored", "extraRuns", "isWide", "isNoBall", "isBye", "isLegBye", "isWicket", "isInningsComplete", "dismissalType"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING *`,
       [
         id,
         ballNumber,
@@ -227,6 +233,7 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
         legBye ? 1 : 0,
         wicket ? 1 : 0,
         inningsComplete ? 1 : 0,
+        dismissalType && String(dismissalType).trim() ? String(dismissalType).trim() : null,
       ]
     );
 

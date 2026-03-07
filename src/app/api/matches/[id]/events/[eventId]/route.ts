@@ -54,6 +54,7 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
       isLegBye,
       isWicket,
       isInningsComplete,
+      dismissalType,
     } = await request.json();
 
     const db = getDb();
@@ -74,13 +75,17 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
         : eventResult.rows[0].inningsNumber || 1;
 
     const safeRunsScored = Number.isFinite(runsScored) && runsScored >= 0 ? runsScored : 0;
-    const safeExtraRuns = Number.isFinite(extraRuns) && extraRuns >= 0 ? extraRuns : 0;
+    let safeExtraRuns = Number.isFinite(extraRuns) && extraRuns >= 0 ? extraRuns : 0;
     const wide = !!isWide;
     const noBall = !!isNoBall;
     const bye = !!isBye;
     const legBye = !!isLegBye;
     const wicket = !!isWicket;
     const inningsComplete = !!isInningsComplete;
+
+    if (wide || noBall) {
+      safeExtraRuns += 1;
+    }
 
     const result = await db.query(
       `UPDATE match_events
@@ -106,8 +111,9 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
            "isBye" = $20,
            "isLegBye" = $21,
            "isWicket" = $22,
-           "isInningsComplete" = $23
-       WHERE id = $24 RETURNING *`,
+           "isInningsComplete" = $23,
+           "dismissalType" = $24
+       WHERE id = $25 RETURNING *`,
       [
         ballNumber,
         bowlerName,
@@ -132,6 +138,7 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
         legBye ? 1 : 0,
         wicket ? 1 : 0,
         inningsComplete ? 1 : 0,
+        dismissalType && String(dismissalType).trim() ? String(dismissalType).trim() : null,
         eventId,
       ]
     );

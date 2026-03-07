@@ -137,6 +137,7 @@ async function initializeDatabase(database: Pool) {
       "isLegBye" INTEGER DEFAULT 0,
       "isWicket" INTEGER DEFAULT 0,
       "isInningsComplete" INTEGER DEFAULT 0,
+      "dismissalType" TEXT,
       "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY ("matchId") REFERENCES matches(id) ON DELETE CASCADE
     );
@@ -156,6 +157,7 @@ async function initializeDatabase(database: Pool) {
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isLegBye" INTEGER DEFAULT 0;
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isWicket" INTEGER DEFAULT 0;
     ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "isInningsComplete" INTEGER DEFAULT 0;
+    ALTER TABLE match_events ADD COLUMN IF NOT EXISTS "dismissalType" TEXT;
 
     ALTER TABLE matches ADD COLUMN IF NOT EXISTS "tossWinnerTeamId" INTEGER;
     ALTER TABLE matches ADD COLUMN IF NOT EXISTS "tossDecision" TEXT;

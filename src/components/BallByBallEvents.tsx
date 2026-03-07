@@ -43,6 +43,7 @@ interface MatchEvent {
   isLegBye?: number;
   isWicket?: number;
   isInningsComplete?: number;
+  dismissalType?: string | null;
 }
 
 interface BallByBallEventsProps {
@@ -112,6 +113,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     isLegBye: false,
     isWicket: false,
     isInningsComplete: false,
+    dismissalType: '',
+    nextBatsmanName: '',
   });
 
   useEffect(() => {
@@ -159,6 +162,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           isLegBye: false,
           isWicket: false,
           isInningsComplete: false,
+          dismissalType: '',
+          nextBatsmanName: '',
         }));
         // set innings to the latest innings present
         const maxInnings = data.reduce(
@@ -215,10 +220,26 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     return parts.join(' | ');
   };
 
+  const DISMISSAL_TYPES = [
+    'Bowled',
+    'Caught',
+    'Run out',
+    'LBW',
+    'Stumped',
+    'Hit wicket',
+    'Obstructing the field',
+    'Retired hurt',
+    'Retired out',
+  ];
+
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.ballNumber || !formData.bowlerName || !formData.batsmanName) {
       setError('Ball number, bowler, and batsman are required');
+      return;
+    }
+    if (formData.isWicket && !formData.nextBatsmanName) {
+      setError('Select next batsman when marking a wicket');
       return;
     }
 
@@ -250,27 +271,33 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         }
         setEvents(updatedEvents);
 
-        // Determine next striker/non-striker based on runs and over completion
+        // Determine next striker/non-striker based on wicket, runs, and over completion
+        const isWicket = resultEvent.isWicket === 1;
         let nextBatsman = formData.batsmanName;
         let nextNonStriker = formData.nonStrikerName;
-        const isWide = resultEvent.isWide === 1;
-        const isNoBall = resultEvent.isNoBall === 1;
-        const runs = resultEvent.runsScored ?? 0;
-        const [overStr, ballStr] = resultEvent.ballNumber.split('.');
-        const ballNum = Number(ballStr) || 0;
+        if (isWicket && formData.nextBatsmanName) {
+          nextBatsman = formData.nextBatsmanName;
+          nextNonStriker = formData.nonStrikerName; // non-striker stays at other end
+        } else {
+          const isWide = resultEvent.isWide === 1;
+          const isNoBall = resultEvent.isNoBall === 1;
+          const runs = resultEvent.runsScored ?? 0;
+          const [overStr, ballStr] = resultEvent.ballNumber.split('.');
+          const ballNum = Number(ballStr) || 0;
 
-        if (nextBatsman && nextNonStriker) {
-          const shouldSwapForRuns =
-            !isWide && !isNoBall && (runs === 1 || runs === 3);
-          const isLegalDelivery = !isWide && !isNoBall;
-          const isEndOfOver = isLegalDelivery && ballNum === 6;
+          if (nextBatsman && nextNonStriker) {
+            const shouldSwapForRuns =
+              !isWide && !isNoBall && (runs === 1 || runs === 3);
+            const isLegalDelivery = !isWide && !isNoBall;
+            const isEndOfOver = isLegalDelivery && ballNum === 6;
 
-          if (shouldSwapForRuns) {
-            [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
-          }
+            if (shouldSwapForRuns) {
+              [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
+            }
 
-          if (isEndOfOver) {
-            [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
+            if (isEndOfOver) {
+              [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
+            }
           }
         }
 
@@ -304,6 +331,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           isLegBye: false,
           isWicket: false,
           isInningsComplete: false,
+          dismissalType: '',
+          nextBatsmanName: '',
         });
         setError('');
         fetchScoreboard();
@@ -359,6 +388,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       isLegBye: event.isLegBye === 1,
       isWicket: event.isWicket === 1,
       isInningsComplete: event.isInningsComplete === 1,
+      dismissalType: event.dismissalType || '',
+      nextBatsmanName: '',
     });
     setEditingEventId(event.id);
     setInningsNumber(event.inningsNumber || 1);
@@ -381,6 +412,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       eventDescription: '',
       hasComment: false,
       eventComment: '',
+      dismissalType: '',
+      nextBatsmanName: '',
     });
     setError('');
   };
@@ -600,6 +633,53 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
               />
               <span>Leg Bye</span>
             </label>
+          </div>
+
+          {/* Wicket: Batsman out, dismissal type, next batsman */}
+          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isWicket}
+                onChange={(e) => setFormData({ ...formData, isWicket: e.target.checked })}
+                className="w-4 h-4 accent-red-600"
+              />
+              <span>Batsman out</span>
+            </label>
+            {formData.isWicket && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-6">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Dismissal type</label>
+                  <select
+                    value={formData.dismissalType}
+                    onChange={(e) => setFormData({ ...formData, dismissalType: e.target.value })}
+                    className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">Select</option>
+                    {DISMISSAL_TYPES.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Next batsman</label>
+                  <select
+                    value={formData.nextBatsmanName}
+                    onChange={(e) => setFormData({ ...formData, nextBatsmanName: e.target.value })}
+                    className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">Select</option>
+                    {battingPlayers
+                      .filter((p) => p.name !== formData.batsmanName && p.name !== formData.nonStrikerName)
+                      .map((player) => (
+                        <option key={`next-${player.id}`} value={player.name}>
+                          {player.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Row 1: Ball, Bowler, Batsman, Bookmaker, Fav Team */}
@@ -880,6 +960,11 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                         💰 {event.fancy2}
                       </span>
                     )}
+                    {event.isWicket === 1 && (
+                      <span className="text-xs bg-red-200 text-red-800 px-1 py-0.5 rounded font-semibold">
+                        Wicket {event.dismissalType ? `(${event.dismissalType})` : ''}
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     <button
@@ -901,7 +986,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 {(event.ballInfo ||
                   eventRunningTotals.get(event.id) !== undefined ||
                   event.eventOccurred === 1 ||
-                  event.hasComment === 1) && (
+                  event.hasComment === 1 ||
+                  event.isWicket === 1) && (
                   <div className="mt-2 pt-2 border-t border-gray-300 space-y-1">
                     {event.ballInfo && (
                       <p className="text-xs text-gray-700">
@@ -917,6 +1003,11 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                     {event.eventOccurred === 1 && (
                       <p className="text-xs text-yellow-800 font-semibold">
                         🚨 {event.eventDescription || 'Event'}
+                      </p>
+                    )}
+                    {event.isWicket === 1 && event.dismissalType && (
+                      <p className="text-xs text-red-700 font-semibold">
+                        Dismissal: {event.dismissalType}
                       </p>
                     )}
                   </div>
