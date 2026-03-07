@@ -397,7 +397,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
 
   const handleCancelEdit = () => {
     setEditingEventId(null);
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       ballNumber: getNextBallNumber(events),
       bowlerName: formData.bowlerName,
       batsmanName: formData.batsmanName,
@@ -414,7 +415,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       eventComment: '',
       dismissalType: '',
       nextBatsmanName: '',
-    });
+    }));
     setError('');
   };
 

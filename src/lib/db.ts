@@ -1,10 +1,15 @@
 import { Pool, QueryResult } from 'pg';
+import dotenv from "dotenv";
 
 let pool: Pool | null = null;
 let initPromise: Promise<void> | null = null;
 
 function getDb() {
   if (!pool) {
+
+    const envFile = process.env.NODE_ENV === "production" ? ".env.prod" : ".env.local";
+    dotenv.config({ path: envFile });
+
     pool = new Pool({
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'postgres',
