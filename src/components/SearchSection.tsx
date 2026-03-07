@@ -23,6 +23,16 @@ export default function SearchSection() {
   const [error, setError] = useState('');
   const [championships, setChampionships] = useState<Championship[]>([]);
 
+  const [analyticsResult, setAnalyticsResult] = useState<{
+    matchCount: number;
+    totalRuns: number;
+    wicketCount: number;
+    ballCount: number;
+    summarySentence: string;
+    filters: Record<string, string | null>;
+  } | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
   useEffect(() => {
     fetchChampionships();
   }, []);
@@ -47,6 +57,35 @@ export default function SearchSection() {
     params.push(`limit=${Math.max(1, Math.min(1000, Number(limit || 50)))}`);
     params.push(`offset=${Math.max(0, Number(offset || 0))}`);
     return params.length ? `?${params.join('&')}` : '';
+  };
+
+  /** Query string for analytics (filter params only; analytics API ignores limit/offset) */
+  const buildAnalyticsQuery = () => {
+    const params: string[] = [];
+    if (batsmanOnStrike.trim()) params.push(`batsmanOnStrike=${encodeURIComponent(batsmanOnStrike.trim())}`);
+    if (batsmanNonStrike.trim()) params.push(`batsmanNonStrike=${encodeURIComponent(batsmanNonStrike.trim())}`);
+    if (bowler.trim()) params.push(`bowler=${encodeURIComponent(bowler.trim())}`);
+    if (ground.trim()) params.push(`ground=${encodeURIComponent(ground.trim())}`);
+    if (championshipId) params.push(`championship=${encodeURIComponent(championshipId)}`);
+    return params.length ? `?${params.join('&')}` : '?';
+  };
+
+  const handleGetAnalytics = async () => {
+    setError('');
+    setAnalyticsResult(null);
+    setAnalyticsLoading(true);
+    try {
+      const qs = buildAnalyticsQuery();
+      const res = await fetch(`/api/search/analytics${qs}`);
+      if (!res.ok) throw new Error(`Analytics failed: ${res.status}`);
+      const data = await res.json();
+      setAnalyticsResult(data);
+    } catch (err) {
+      setError('Failed to load analytics');
+      console.error(err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
   };
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -85,6 +124,7 @@ export default function SearchSection() {
     setLimit(50);
     setOffset(0);
     setResults([]);
+    setAnalyticsResult(null);
     setError('');
   };
 
@@ -138,12 +178,33 @@ export default function SearchSection() {
           <label className="block text-sm font-semibold text-gray-700 mb-2">Limit</label>
           <input type="number" value={limit} onChange={(e) => setLimit(Math.max(1, Number(e.target.value || 50)))} className="w-full px-3 py-2 border rounded" />
         </div>
-        <div className="flex items-end">
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <div className="flex items-end gap-2">
+          <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             {loading ? 'Searching…' : 'Search'}
+          </button>
+          <button
+            type="button"
+            onClick={handleGetAnalytics}
+            disabled={analyticsLoading}
+            className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {analyticsLoading ? 'Loading…' : 'Get Analytics'}
           </button>
         </div>
       </form>
+
+      {analyticsResult && (
+        <div className="mb-6 p-5 rounded-xl border border-emerald-200 bg-emerald-50/80 shadow-sm">
+          <h3 className="text-lg font-bold text-emerald-800 mb-2">Analytics</h3>
+          <p className="text-gray-800 leading-relaxed mb-4">{analyticsResult.summarySentence}</p>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <span className="font-semibold text-gray-700">Matches: <span className="text-emerald-700">{analyticsResult.matchCount}</span></span>
+            <span className="font-semibold text-gray-700">Runs: <span className="text-emerald-700">{analyticsResult.totalRuns}</span></span>
+            <span className="font-semibold text-gray-700">Wickets: <span className="text-emerald-700">{analyticsResult.wicketCount}</span></span>
+            <span className="font-semibold text-gray-700">Balls: <span className="text-emerald-700">{analyticsResult.ballCount}</span></span>
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 flex items-center gap-3">
         <button onClick={handleReset} className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200">Reset</button>
