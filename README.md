@@ -101,16 +101,36 @@ src/
 
 ---
 
-## Password-Protected Access 🔒
-This site now requires a password to view any page. Set an environment variable in your development or production environment:
+## OTP-Based Authentication 🔐
+This site uses OTP (One-Time Password) authentication via Telegram. Configure the following environment variables:
 
 ```bash
-AUTH_PASSWORD=your_secret_password
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
 ```
 
-- A login page (`/login`) will be shown to unauthenticated users.
-- Successful login sets a cookie valid for one day; you can adjust the duration in `src/app/api/login/route.ts` or change the middleware logic in `middleware.ts`.
-- Use the **Logout** button in the top-right corner of any page to clear the session.
+**How to get Telegram Bot Token:**
+1. Open Telegram and search for [@BotFather](https://t.me/botfather)
+2. Send `/newbot` and follow the instructions
+3. Copy the bot token provided
+
+**How to get Telegram Chat ID:**
+1. Start a chat with your bot
+2. Send a message to your bot
+3. Visit `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+4. Find your chat ID in the response (it's a number)
+
+**Authentication Flow:**
+- A login page (`/login`) will be shown to unauthenticated users
+- Click "Send OTP" to receive a 6-digit code via Telegram
+- Enter the OTP to authenticate
+- Successful login sets a cookie valid for one day
+- Use the **Logout** button in the top-right corner of any page to clear the session
+
+**OTP Security:**
+- OTPs expire after 3 minutes
+- Each OTP can only be used once
+- OTPs are stored temporarily in memory
 
 
 

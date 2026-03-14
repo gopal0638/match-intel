@@ -7,8 +7,8 @@ const PUBLIC_FILE = /\.(.*)$/;
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // if no password defined, skip authentication entirely
-  if (!process.env.AUTH_PASSWORD) {
+  // if no Telegram bot configuration, skip authentication entirely
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
     return NextResponse.next();
   }
 
