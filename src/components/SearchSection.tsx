@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import PlayerAutocomplete from './PlayerAutocomplete';
 
 interface Championship {
   id: number;
@@ -150,16 +151,31 @@ export default function SearchSection() {
 
       <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Batsman (on strike)</label>
-          <input value={batsmanOnStrike} onChange={(e) => setBatsmanOnStrike(e.target.value)} className="w-full px-3 py-2 border rounded" placeholder="Name or partial" />
+          <PlayerAutocomplete
+            value={batsmanOnStrike}
+            onChange={setBatsmanOnStrike}
+            placeholder="Name or partial"
+            className="w-full px-3 py-2 border rounded"
+            label="Batsman (on strike)"
+          />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Batsman (non-strike)</label>
-          <input value={batsmanNonStrike} onChange={(e) => setBatsmanNonStrike(e.target.value)} className="w-full px-3 py-2 border rounded" placeholder="Name or partial" />
+          <PlayerAutocomplete
+            value={batsmanNonStrike}
+            onChange={setBatsmanNonStrike}
+            placeholder="Name or partial"
+            className="w-full px-3 py-2 border rounded"
+            label="Batsman (non-strike)"
+          />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Bowler</label>
-          <input value={bowler} onChange={(e) => setBowler(e.target.value)} className="w-full px-3 py-2 border rounded" placeholder="Name or partial" />
+          <PlayerAutocomplete
+            value={bowler}
+            onChange={setBowler}
+            placeholder="Name or partial"
+            className="w-full px-3 py-2 border rounded"
+            label="Bowler"
+          />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Ground</label>

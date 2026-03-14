@@ -151,6 +151,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         setFormData(prev => ({
           ...prev,
           ballNumber: nextBall,
+          // Preserve bookmaker, fancy1, and fancy2 values
           ballInfo: '',
           ballInfoNote: '',
           eventOccurred: false,
@@ -327,10 +328,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           bowlerName: formData.bowlerName,
           batsmanName: nextBatsman,
           nonStrikerName: nextNonStriker,
-          bookmaker: '',
+          bookmaker: formData.bookmaker, // Preserve bookmaker value
           favTeam: formData.favTeam,
-          fancy1: '',
-          fancy2: '',
+          fancy1: formData.fancy1, // Preserve fancy1 value
+          fancy2: formData.fancy2, // Preserve fancy2 value
           ballInfo: '',
           ballInfoNote: '',
           eventOccurred: false,
@@ -418,10 +419,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       bowlerName: formData.bowlerName,
       batsmanName: formData.batsmanName,
       nonStrikerName: formData.nonStrikerName,
-      bookmaker: '',
+      bookmaker: prev.bookmaker, // Preserve bookmaker value
       favTeam: formData.favTeam,
-      fancy1: '',
-      fancy2: '',
+      fancy1: prev.fancy1, // Preserve fancy1 value
+      fancy2: prev.fancy2, // Preserve fancy2 value
       ballInfo: '',
       ballInfoNote: '',
       eventOccurred: false,
