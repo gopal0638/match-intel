@@ -44,6 +44,7 @@ interface MatchEvent {
   isWicket?: number;
   isInningsComplete?: number;
   dismissalType?: string | null;
+  runOutBatsman?: string | null;
 }
 
 interface BallByBallEventsProps {
@@ -114,6 +115,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     isWicket: false,
     isInningsComplete: false,
     dismissalType: '',
+    runOutBatsman: '',
     nextBatsmanName: '',
   });
 
@@ -163,6 +165,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           isWicket: false,
           isInningsComplete: false,
           dismissalType: '',
+          runOutBatsman: '',
           nextBatsmanName: '',
         }));
         // set innings to the latest innings present
@@ -242,6 +245,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       setError('Select next batsman when marking a wicket');
       return;
     }
+    if (formData.isWicket && formData.dismissalType === 'Run out' && !formData.runOutBatsman) {
+      setError('Select who was run out (striker or non-striker)');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -276,8 +283,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         let nextBatsman = formData.batsmanName;
         let nextNonStriker = formData.nonStrikerName;
         if (isWicket && formData.nextBatsmanName) {
-          nextBatsman = formData.nextBatsmanName;
-          nextNonStriker = formData.nonStrikerName; // non-striker stays at other end
+          const runOutWho = resultEvent.runOutBatsman || formData.runOutBatsman || 'striker';
+          if (runOutWho === 'nonStriker') {
+            nextBatsman = formData.batsmanName;
+            nextNonStriker = formData.nextBatsmanName;
+          } else {
+            nextBatsman = formData.nextBatsmanName;
+            nextNonStriker = formData.nonStrikerName;
+          }
         } else {
           const isWide = resultEvent.isWide === 1;
           const isNoBall = resultEvent.isNoBall === 1;
@@ -332,6 +345,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
           isWicket: false,
           isInningsComplete: false,
           dismissalType: '',
+          runOutBatsman: '',
           nextBatsmanName: '',
         });
         setError('');
@@ -389,6 +403,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       isWicket: event.isWicket === 1,
       isInningsComplete: event.isInningsComplete === 1,
       dismissalType: event.dismissalType || '',
+      runOutBatsman: event.runOutBatsman || '',
       nextBatsmanName: '',
     });
     setEditingEventId(event.id);
@@ -414,6 +429,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       hasComment: false,
       eventComment: '',
       dismissalType: '',
+      runOutBatsman: '',
       nextBatsmanName: '',
     }));
     setError('');
@@ -653,7 +669,13 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Dismissal type</label>
                   <select
                     value={formData.dismissalType}
-                    onChange={(e) => setFormData({ ...formData, dismissalType: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        dismissalType: e.target.value,
+                        runOutBatsman: e.target.value === 'Run out' ? formData.runOutBatsman : '',
+                      })
+                    }
                     className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
                     <option value="">Select</option>
@@ -662,6 +684,20 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                     ))}
                   </select>
                 </div>
+                {formData.dismissalType === 'Run out' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Who was run out?</label>
+                    <select
+                      value={formData.runOutBatsman}
+                      onChange={(e) => setFormData({ ...formData, runOutBatsman: e.target.value })}
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="">Select</option>
+                      <option value="striker">Striker (batsman)</option>
+                      <option value="nonStriker">Non-striker</option>
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Next batsman</label>
                   <select
@@ -963,7 +999,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                     )}
                     {event.isWicket === 1 && (
                       <span className="text-xs bg-red-200 text-red-800 px-1 py-0.5 rounded font-semibold">
-                        Wicket {event.dismissalType ? `(${event.dismissalType})` : ''}
+                        Wicket{' '}
+                        {event.dismissalType
+                          ? `(${event.dismissalType}${event.runOutBatsman ? ` - ${event.runOutBatsman === 'nonStriker' ? 'non-striker' : 'striker'}` : ''})`
+                          : ''}
                       </span>
                     )}
                   </div>
@@ -1009,6 +1048,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                     {event.isWicket === 1 && event.dismissalType && (
                       <p className="text-xs text-red-700 font-semibold">
                         Dismissal: {event.dismissalType}
+                        {event.runOutBatsman &&
+                          ` (${event.runOutBatsman === 'nonStriker' ? 'non-striker' : 'striker'} out)`}
                       </p>
                     )}
                   </div>
