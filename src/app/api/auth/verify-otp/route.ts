@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
 
     // OTP is valid - create login session
     const response = NextResponse.json({ success: true });
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const isHttps =
+      forwardedProto === 'https' || request.nextUrl.protocol === 'https:';
     response.cookies.set({
       name: 'auth',
       value: 'true',
@@ -63,7 +66,10 @@ export async function POST(request: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 24, // 1 day
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      // Only set Secure cookies when the request is actually HTTPS.
+      // In some deployments NODE_ENV=production but the app is served over plain HTTP,
+      // and browsers will silently ignore Secure cookies.
+      secure: isHttps,
     });
 
     return response;
