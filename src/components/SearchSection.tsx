@@ -258,7 +258,11 @@ export default function SearchSection() {
                 <div className="text-xs text-gray-700 mt-1">
                   <div><strong>Championship:</strong> {r.championshipName}</div>
                   <div><strong>Score:</strong> {r.runningTotal ?? '—'}</div>
-                  {r.eventDescription && <div className="text-xs italic mt-2 text-gray-600">{r.eventDescription}</div>}
+                  {r.eventDescription && (
+                    <div className="text-xs mt-2 text-red-800 font-semibold border rounded p-4 bg-yellow shadow-sm hover:shadow-md transition-shadow border-orange-300 bg-gradient-to-r from-orange-50 to-orange-50">
+                      🚨 {r.eventDescription}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
