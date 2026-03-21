@@ -8,6 +8,7 @@ A web-based cricket data management platform built with **Next.js** and **React*
 - **Team Players**: Add and manage players for each team
 - **Championships**: Organize tournaments/championships
 - **Match Management**: Create matches between teams with date/time, ground name, and type (Test/One Day/T20)
+- **Ball-by-Ball Validation**: During an innings, a dismissed batsman cannot be selected again as striker or non-striker
 - **Player Statistics**: Track batsman (runs, balls faced) and bowler (wickets, runs conceded) records
 - **Review System**: Add comments and mark records as reviewed
 - **Search Functionality**: Search players by name across:

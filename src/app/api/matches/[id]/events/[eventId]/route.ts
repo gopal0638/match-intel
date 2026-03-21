@@ -5,6 +5,37 @@ interface EventParams {
   params: Promise<{ id: string; eventId: string }>;
 }
 
+async function getDismissedBatsmen(
+  matchId: string,
+  inningsNumber: number,
+  excludeEventId?: string
+) {
+  const db = getDb();
+  const query = excludeEventId
+    ? `SELECT "batsmanName", "nonStrikerName", "dismissalType", "runOutBatsman"
+       FROM match_events
+       WHERE "matchId" = $1 AND "inningsNumber" = $2 AND "isWicket" = 1 AND id <> $3`
+    : `SELECT "batsmanName", "nonStrikerName", "dismissalType", "runOutBatsman"
+       FROM match_events
+       WHERE "matchId" = $1 AND "inningsNumber" = $2 AND "isWicket" = 1`;
+  const params = excludeEventId ? [matchId, inningsNumber, excludeEventId] : [matchId, inningsNumber];
+  const result = await db.query(query, params);
+
+  const dismissed = new Set<string>();
+  for (const row of result.rows as {
+    batsmanName: string;
+    nonStrikerName: string | null;
+    dismissalType: string | null;
+    runOutBatsman: string | null;
+  }[]) {
+    const isRunOutNonStriker =
+      row.dismissalType === 'Run out' && row.runOutBatsman === 'nonStriker';
+    const outPlayer = isRunOutNonStriker ? row.nonStrikerName : row.batsmanName;
+    if (outPlayer) dismissed.add(outPlayer);
+  }
+  return dismissed;
+}
+
 export async function DELETE(request: NextRequest, { params }: EventParams) {
   try {
     const { id, eventId } = await params;
@@ -74,6 +105,20 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
       typeof inningsNumber === 'number' && inningsNumber >= 1
         ? inningsNumber
         : eventResult.rows[0].inningsNumber || 1;
+
+    const dismissedBatsmen = await getDismissedBatsmen(id, innings, eventId);
+    if (dismissedBatsmen.has(batsmanName)) {
+      return NextResponse.json(
+        { error: 'Selected batsman is already out in this innings' },
+        { status: 400 }
+      );
+    }
+    if (nonStrikerName && dismissedBatsmen.has(nonStrikerName)) {
+      return NextResponse.json(
+        { error: 'Selected non-striker is already out in this innings' },
+        { status: 400 }
+      );
+    }
 
     const safeRunsScored = Number.isFinite(runsScored) && runsScored >= 0 ? runsScored : 0;
     let safeExtraRuns = Number.isFinite(extraRuns) && extraRuns >= 0 ? extraRuns : 0;

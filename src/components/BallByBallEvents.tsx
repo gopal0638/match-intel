@@ -236,6 +236,22 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     'Retired out',
   ];
 
+  const getDismissedBatsmenForInnings = (innings: number) => {
+    const dismissed = new Set<string>();
+    for (const ev of events) {
+      if ((ev.inningsNumber || 1) !== innings || ev.isWicket !== 1) continue;
+      const isRunOutNonStriker =
+        ev.dismissalType === 'Run out' && ev.runOutBatsman === 'nonStriker';
+      const outPlayer = isRunOutNonStriker ? ev.nonStrikerName : ev.batsmanName;
+      if (outPlayer) {
+        dismissed.add(outPlayer);
+      }
+    }
+    return dismissed;
+  };
+
+  const dismissedBatsmen = getDismissedBatsmenForInnings(inningsNumber);
+
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.ballNumber || !formData.bowlerName || !formData.batsmanName) {
@@ -248,6 +264,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     }
     if (formData.isWicket && formData.dismissalType === 'Run out' && !formData.runOutBatsman) {
       setError('Select who was run out (striker or non-striker)');
+      return;
+    }
+    if (dismissedBatsmen.has(formData.batsmanName)) {
+      setError('Selected batsman is already out in this innings');
+      return;
+    }
+    if (formData.nonStrikerName && dismissedBatsmen.has(formData.nonStrikerName)) {
+      setError('Selected non-striker is already out in this innings');
       return;
     }
 
@@ -487,6 +511,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
   };
 
   const { battingPlayers, bowlingPlayers } = computeBattingAndBowling();
+  const availableBatters = battingPlayers.filter((p) => !dismissedBatsmen.has(p.name));
 
   return (
     <div className="space-y-6">
@@ -707,7 +732,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                     className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
                     <option value="">Select</option>
-                    {battingPlayers
+                    {availableBatters
                       .filter((p) => p.name !== formData.batsmanName && p.name !== formData.nonStrikerName)
                       .map((player) => (
                         <option key={`next-${player.id}`} value={player.name}>
@@ -757,7 +782,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="">Select</option>
-                {battingPlayers.map((player) => (
+                {availableBatters.map((player) => (
                   <option key={`batsman-${player.id}`} value={player.name}>
                     {player.name}
                   </option>
@@ -773,7 +798,7 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
                 className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="">Select</option>
-                {battingPlayers.map((player) => (
+                {availableBatters.map((player) => (
                   <option key={`nonstriker-${player.id}`} value={player.name}>
                     {player.name}
                   </option>
