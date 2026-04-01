@@ -17,4 +17,4 @@ services:
 
 volumes:
   postgres_data:
-    name: match_intel_postgres_data
+    name: cricket_db

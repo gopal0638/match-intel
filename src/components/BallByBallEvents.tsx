@@ -307,6 +307,14 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
         const isWicket = resultEvent.isWicket === 1;
         let nextBatsman = formData.batsmanName;
         let nextNonStriker = formData.nonStrikerName;
+
+        const isWide = resultEvent.isWide === 1;
+        const isNoBall = resultEvent.isNoBall === 1;
+        const [overStr, ballStr] = resultEvent.ballNumber.split('.');
+        const ballNum = Number(ballStr) || 0;
+        const isLegalDelivery = !isWide && !isNoBall;
+        const isEndOfOver = isLegalDelivery && ballNum === 6;
+
         if (isWicket && formData.nextBatsmanName) {
           const runOutWho = resultEvent.runOutBatsman || formData.runOutBatsman || 'striker';
           if (runOutWho === 'nonStriker') {
@@ -316,18 +324,16 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
             nextBatsman = formData.nextBatsmanName;
             nextNonStriker = formData.nonStrikerName;
           }
+
+          if (runOutWho !== 'nonStriker' && isEndOfOver && nextBatsman && nextNonStriker) {
+            [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
+          }
         } else {
-          const isWide = resultEvent.isWide === 1;
-          const isNoBall = resultEvent.isNoBall === 1;
           const runs = resultEvent.runsScored ?? 0;
-          const [overStr, ballStr] = resultEvent.ballNumber.split('.');
-          const ballNum = Number(ballStr) || 0;
 
           if (nextBatsman && nextNonStriker) {
             const shouldSwapForRuns =
               !isWide && !isNoBall && (runs === 1 || runs === 3);
-            const isLegalDelivery = !isWide && !isNoBall;
-            const isEndOfOver = isLegalDelivery && ballNum === 6;
 
             if (shouldSwapForRuns) {
               [nextBatsman, nextNonStriker] = [nextNonStriker, nextBatsman];
