@@ -87,6 +87,7 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
       isInningsComplete,
       dismissalType,
       runOutBatsman,
+      nextBatsmanName,
     } = await request.json();
 
     const db = getDb();
@@ -138,6 +139,13 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
         ? runOutBatsman
         : null;
 
+    if (wicket && !nextBatsmanName) {
+      return NextResponse.json(
+        { error: 'Select next batsman when marking a wicket' },
+        { status: 400 }
+      );
+    }
+
     const result = await db.query(
       `UPDATE match_events
        SET "ballNumber" = $1,
@@ -164,8 +172,9 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
            "isWicket" = $22,
            "isInningsComplete" = $23,
            "dismissalType" = $24,
-           "runOutBatsman" = $25
-       WHERE id = $26 RETURNING *`,
+           "runOutBatsman" = $25,
+           "nextBatsmanName" = $26
+       WHERE id = $27 RETURNING *`,
       [
         ballNumber,
         bowlerName,
@@ -192,6 +201,7 @@ export async function PUT(request: NextRequest, { params }: EventParams) {
         inningsComplete ? 1 : 0,
         dismissalType && String(dismissalType).trim() ? String(dismissalType).trim() : null,
         runOutValue,
+        wicket ? nextBatsmanName || null : null,
         eventId,
       ]
     );

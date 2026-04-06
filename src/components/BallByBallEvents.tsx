@@ -45,6 +45,7 @@ interface MatchEvent {
   isInningsComplete?: number;
   dismissalType?: string | null;
   runOutBatsman?: string | null;
+  nextBatsmanName?: string | null;
 }
 
 interface BallByBallEventsProps {
@@ -236,10 +237,19 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     'Retired out',
   ];
 
-  const getDismissedBatsmenForInnings = (innings: number) => {
+  const getDismissedBatsmenForInnings = (
+    innings: number,
+    excludeEventId?: number | null
+  ) => {
     const dismissed = new Set<string>();
     for (const ev of events) {
-      if ((ev.inningsNumber || 1) !== innings || ev.isWicket !== 1) continue;
+      if (
+        (ev.inningsNumber || 1) !== innings ||
+        ev.isWicket !== 1 ||
+        (excludeEventId && ev.id === excludeEventId)
+      ) {
+        continue;
+      }
       const isRunOutNonStriker =
         ev.dismissalType === 'Run out' && ev.runOutBatsman === 'nonStriker';
       const outPlayer = isRunOutNonStriker ? ev.nonStrikerName : ev.batsmanName;
@@ -250,7 +260,10 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     return dismissed;
   };
 
-  const dismissedBatsmen = getDismissedBatsmenForInnings(inningsNumber);
+  const dismissedBatsmen = getDismissedBatsmenForInnings(
+    inningsNumber,
+    editingEventId
+  );
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,6 +423,40 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
     }
   };
 
+  const inferNextBatsmanFromEvent = (event: MatchEvent) => {
+    if (!event.isWicket) return '';
+    const innings = event.inningsNumber || 1;
+    const currentNames = new Set<string>([
+      event.batsmanName,
+      event.nonStrikerName || '',
+    ].filter(Boolean));
+
+    const sortedEvents = [...events].sort((a, b) => {
+      const inningsA = a.inningsNumber || 1;
+      const inningsB = b.inningsNumber || 1;
+      if (inningsA !== inningsB) return inningsA - inningsB;
+      const [overA, ballA] = a.ballNumber.split('.').map(Number);
+      const [overB, ballB] = b.ballNumber.split('.').map(Number);
+      if (overA !== overB) return overA - overB;
+      return ballA - ballB;
+    });
+
+    const index = sortedEvents.findIndex((e) => e.id === event.id);
+    if (index === -1) return '';
+
+    for (let i = index + 1; i < sortedEvents.length; i += 1) {
+      const nextEvent = sortedEvents[i];
+      if ((nextEvent.inningsNumber || 1) !== innings) continue;
+      const candidateNames = [nextEvent.batsmanName, nextEvent.nonStrikerName || ''].filter(
+        Boolean
+      );
+      const replacement = candidateNames.find((name) => !currentNames.has(name));
+      if (replacement) return replacement;
+    }
+
+    return '';
+  };
+
   const handleEditEvent = (event: MatchEvent) => {
     setFormData({
       ballNumber: event.ballNumber,
@@ -435,7 +482,8 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
       isInningsComplete: event.isInningsComplete === 1,
       dismissalType: event.dismissalType || '',
       runOutBatsman: event.runOutBatsman || '',
-      nextBatsmanName: '',
+      nextBatsmanName:
+        event.nextBatsmanName || inferNextBatsmanFromEvent(event) || '',
     });
     setEditingEventId(event.id);
     setInningsNumber(event.inningsNumber || 1);
@@ -517,7 +565,28 @@ export default function BallByBallEvents({ matchId }: BallByBallEventsProps) {
   };
 
   const { battingPlayers, bowlingPlayers } = computeBattingAndBowling();
-  const availableBatters = battingPlayers.filter((p) => !dismissedBatsmen.has(p.name));
+  const selectedBatters = new Set(
+    [formData.batsmanName, formData.nonStrikerName, formData.nextBatsmanName].filter(
+      Boolean
+    )
+  );
+  let availableBatters = battingPlayers.filter(
+    (p) => !dismissedBatsmen.has(p.name) || selectedBatters.has(p.name)
+  );
+
+  if (
+    formData.nextBatsmanName &&
+    !availableBatters.some((p) => p.name === formData.nextBatsmanName)
+  ) {
+    availableBatters = [
+      ...availableBatters,
+      {
+        id: -1,
+        name: formData.nextBatsmanName,
+        playerType: 'batsman',
+      },
+    ];
+  }
 
   return (
     <div className="space-y-6">

@@ -195,6 +195,7 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
       isInningsComplete,
       dismissalType,
       runOutBatsman,
+      nextBatsmanName,
     } = await request.json();
 
     if (!ballNumber || !bowlerName || !batsmanName) {
@@ -252,13 +253,20 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
         ? runOutBatsman
         : null;
 
+    if (wicket && !nextBatsmanName) {
+      return NextResponse.json(
+        { error: 'Select next batsman when marking a wicket' },
+        { status: 400 }
+      );
+    }
+
     const result = await db.query(
       `INSERT INTO match_events (
         "matchId", "ballNumber", "bowlerName", "batsmanName", "nonStrikerName", "inningsNumber",
         bookmaker, "favTeam", fancy1, fancy2, "ballInfo",
         "finalScore", "eventOccurred", "eventDescription", "hasComment", "eventComment",
-        "runsScored", "extraRuns", "isWide", "isNoBall", "isBye", "isLegBye", "isWicket", "isInningsComplete", "dismissalType", "runOutBatsman"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING *`,
+        "runsScored", "extraRuns", "isWide", "isNoBall", "isBye", "isLegBye", "isWicket", "isInningsComplete", "dismissalType", "runOutBatsman", "nextBatsmanName"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING *`,
       [
         id,
         ballNumber,
@@ -286,6 +294,7 @@ export async function POST(request: NextRequest, { params }: MatchEventsParams) 
         inningsComplete ? 1 : 0,
         dismissalType && String(dismissalType).trim() ? String(dismissalType).trim() : null,
         runOutValue,
+        wicket ? nextBatsmanName || null : null,
       ]
     );
 
